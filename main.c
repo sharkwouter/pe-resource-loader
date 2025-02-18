@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
+#include <locale.h>
+#include <wchar.h>
 
 #define MZ 0x5A4D
 
@@ -22,6 +24,10 @@
 #define OPTIONAL_HEADER_64_SIZE 116
 #define DATA_DIRECTORY_SIZE 8
 #define NT_SIGNATURE_SIZE 4
+#define RESOURCE_DIRECTORY_TABLE_SIZE 16
+#define RESOURCE_DIRECTORY_ENTRY_SIZE 8
+
+#define SHORT_NAME_SIZE 8
 
 typedef struct __attribute__((packed)) {
   uint16_t  magic;
@@ -57,6 +63,17 @@ typedef struct __attribute__((packed)) {
   uint32_t  size;
 } DataDirectory;
 
+typedef struct __attribute__((packed)) {
+  uint8_t   unused[12];
+  uint16_t  number_of_name_entries;
+  uint16_t  number_of_id_entries;
+} ResourceDirectoryTable;
+
+typedef struct __attribute__((packed)) {
+  uint32_t  name_offset_and_id;
+  uint32_t  data_or_subdirectory_offset;
+} ResourceDirectoryEntry;
+
 int main(int argc, char ** argv) {
   // Make sure the above structs are the same size as they are on 
   assert(sizeof(DosHeader) == DOS_HEADER_SIZE);
@@ -64,6 +81,8 @@ int main(int argc, char ** argv) {
   assert(sizeof(OptionalHeader) == OPTIONAL_HEADER_SIZE);
   assert(sizeof(OptionalHeader64) == OPTIONAL_HEADER_64_SIZE);
   assert(sizeof(DataDirectory) == DATA_DIRECTORY_SIZE);
+  assert(sizeof(ResourceDirectoryTable) == RESOURCE_DIRECTORY_TABLE_SIZE);
+  assert(sizeof(ResourceDirectoryEntry) == RESOURCE_DIRECTORY_ENTRY_SIZE);
 
   if (argc != 2) {
     printf("No file was defined\n");
@@ -144,8 +163,43 @@ int main(int argc, char ** argv) {
     return 4;
   }
 
-  // At this point, we can go and read the resource directory
-  assert(1);
+  setlocale(LC_ALL, "");
+
+  // Read the 
+  fseek(fd, resource_directory.offset, SEEK_SET);
+  ResourceDirectoryTable * resource_directory_table = (ResourceDirectoryTable *) calloc(1, sizeof(ResourceDirectoryTable));
+  fread(resource_directory_table, sizeof(ResourceDirectoryTable), 1, fd);
+  
+  ResourceDirectoryEntry * name_directory_entries = (ResourceDirectoryEntry *) calloc(resource_directory_table->number_of_name_entries, sizeof(ResourceDirectoryEntry));
+  ResourceDirectoryEntry * id_directory_entries = (ResourceDirectoryEntry *) calloc(resource_directory_table->number_of_id_entries, sizeof(ResourceDirectoryEntry));
+  fread(name_directory_entries, sizeof(ResourceDirectoryEntry), resource_directory_table->number_of_name_entries, fd);
+  fread(id_directory_entries, sizeof(ResourceDirectoryEntry), resource_directory_table->number_of_id_entries, fd);
+  int64_t resources_start = ftell(fd);
+  for(int i = 0; i < resource_directory_table->number_of_name_entries; i++) {
+    int is_resource_data_entry_offset = ((name_directory_entries[i].data_or_subdirectory_offset & 0x80000000) == 0);
+    uint16_t name_length;
+    uint32_t name_offset = (name_directory_entries[i].name_offset_and_id & 0x7FFFFFFF);
+    fseek(fd, resource_directory.offset + name_offset, SEEK_SET);
+    fread(&name_length, sizeof(uint16_t), 1, fd);
+    
+    uint16_t * name = (uint16_t *) calloc(1, sizeof(uint16_t));
+    uint8_t * name_fixed = (uint8_t *) calloc(name_length, sizeof(uint8_t));
+    
+    fread(name, sizeof(uint16_t), 1, fd);
+    wctomb(name_fixed, name);
+
+    // if (name_length < 128 && name_length > 0) {
+      printf("length %i, name: %ls\n", name_length, name);
+      continue;
+    // }
+    // printf("Found name: %s\n", name);
+    if (is_resource_data_entry_offset) {
+
+    } else {
+
+    }
+    free(name);
+  }
 
   fclose(fd);
 
