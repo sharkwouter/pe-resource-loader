@@ -21,7 +21,7 @@
 #define DOS_HEADER_SIZE 64
 #define FILE_HEADER_SIZE 20
 #define OPTIONAL_HEADER_SIZE 96
-#define OPTIONAL_HEADER_64_SIZE 116
+#define OPTIONAL_HEADER_64_SIZE 112
 #define DATA_DIRECTORY_SIZE 8
 #define SECTION_HEADER_SIZE 40
 #define NT_SIGNATURE_SIZE 4
@@ -38,24 +38,30 @@ typedef struct __attribute__((packed)) {
 
 typedef struct __attribute__((packed)) {
   uint16_t  machine;
-  uint8_t   unused[18];
+  uint16_t  number_of_sections;
+  uint8_t   unused[16];
 } FileHeader;
 
 typedef struct __attribute__((packed)) {
   uint16_t  magic;
-  uint8_t   unused1[28];
-  uint16_t  section_alignment;
-  uint16_t  file_alignment;
-  uint8_t   unused2[58];
+  uint8_t   unused1[18];
+  uint32_t  base_of_code; // Relative to image_base
+  uint32_t  base_of_data;
+  uint32_t  image_base;
+  uint32_t  section_alignment;
+  uint32_t  file_alignment;
+  uint8_t   unused3[52];
   uint32_t  number_of_data_directories;
 } OptionalHeader;
 
 typedef struct __attribute__((packed)) {
   uint16_t  magic;
-  uint8_t   unused1[32];
-  uint16_t  section_alignment;
-  uint16_t  file_alignment;
-  uint8_t   unused2[74];
+  uint8_t   unused1[18];
+  uint32_t  base_of_code; // Relative to image_base
+  uint64_t  image_base;
+  uint32_t  section_alignment;
+  uint32_t  file_alignment; // After this is 40
+  uint8_t   unused2[68];
   uint32_t  number_of_data_directories;
 } OptionalHeader64;
 
@@ -134,7 +140,8 @@ int main(int argc, char ** argv) {
         // Get the number of data directories
         OptionalHeader optional_header;
         fread(&optional_header, sizeof(OptionalHeader), 1, fd);
-        assert(optional_header.magic == PE32 || optional_header.magic == PE32PLUS); // If this fails we're either dealing with ROM or invalid data
+        assert(optional_header.magic == PE32); // If this fails we're either dealing with ROM or invalid data
+        //printf("NT Magic: %s\n", optional_header.magic);
         file_alignment = optional_header.file_alignment;
         section_alignment = optional_header.section_alignment;
 
@@ -150,7 +157,7 @@ int main(int argc, char ** argv) {
         // Get the number of data directories
         OptionalHeader64 optional_header;
         fread(&optional_header, sizeof(OptionalHeader64), 1, fd);
-        assert(optional_header.magic == PE32 || optional_header.magic == PE32PLUS); // If this fails we're either dealing with ROM or invalid data
+        assert(optional_header.magic == PE32PLUS); // If this fails we're either dealing with ROM or invalid data
         file_alignment = optional_header.file_alignment;
         section_alignment = optional_header.section_alignment;
   
@@ -187,30 +194,32 @@ int main(int argc, char ** argv) {
   fread(id_directory_entries, sizeof(ResourceDirectoryEntry), resource_directory_table->number_of_id_entries, fd);
   int64_t resources_start = ftell(fd);
   for(int i = 0; i < resource_directory_table->number_of_name_entries; i++) {
-    int is_resource_data_entry_offset = ((name_directory_entries[i].data_or_subdirectory_offset & 0x80000000) == 0);
-    uint16_t name_length;
-    uint32_t name_offset = (name_directory_entries[i].name_offset_and_id & 0x7FFFFFFF);
-    fseek(fd, resource_directory.offset + name_offset, SEEK_SET);
-    fread(&name_length, sizeof(uint16_t), 1, fd);
+    // int is_resource_data_entry_offset = ((name_directory_entries[i].data_or_subdirectory_offset & 0x80000000) == 0);
+    // uint16_t name_length;
+    // uint32_t name_offset = (name_directory_entries[i].name_offset_and_id & 0x7FFFFFFF);
+    // fseek(fd, resource_directory.offset + name_offset, SEEK_SET);
+    // fread(&name_length, sizeof(uint16_t), 1, fd);
     
-    uint16_t * name = (uint16_t *) calloc(1, sizeof(uint16_t));
-    uint8_t * name_fixed = (uint8_t *) calloc(name_length, sizeof(uint8_t));
+    // uint16_t * name = (uint16_t *) calloc(1, sizeof(uint16_t));
+    // uint8_t * name_fixed = (uint8_t *) calloc(name_length, sizeof(uint8_t));
     
-    fread(name, sizeof(uint16_t), 1, fd);
-    wctomb(name_fixed, name);
+    // fread(name, sizeof(uint16_t), 1, fd);
+    // wctomb(name_fixed, name);
 
-    // if (name_length < 128 && name_length > 0) {
-      printf("length %i, name: %ls\n", name_length, name);
-      continue;
+    // // if (name_length < 128 && name_length > 0) {
+    //   printf("length %i, name: %ls\n", name_length, name);
+    //   continue;
+    // // }
+    // // printf("Found name: %s\n", name);
+    // if (is_resource_data_entry_offset) {
+
+    // } else {
+
     // }
-    // printf("Found name: %s\n", name);
-    if (is_resource_data_entry_offset) {
-
-    } else {
-
-    }
-    free(name);
+    // free(name);
   }
+
+
 
   fclose(fd);
 
