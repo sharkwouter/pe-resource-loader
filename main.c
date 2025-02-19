@@ -114,7 +114,7 @@ int main(int argc, char ** argv) {
     return 2;
   }
   fseek(fd, 0, SEEK_END);
-  printf("Size of file: %i\n", ftell(fd));
+  uint32_t file_size = ftell(fd);
   fseek(fd, 0, SEEK_SET);
 
   // Get NT header offset from DOS header
@@ -134,10 +134,8 @@ int main(int argc, char ** argv) {
   FileHeader * file_header = (FileHeader *) calloc(1, sizeof(FileHeader));
   fread(file_header, sizeof(FileHeader), 1, fd);
 
-  DataDirectory resource_directory;
-  uint16_t file_alignment;
-  uint16_t section_alignment;
-  uint32_t  image_base;
+  DataDirectory * data_directories = NULL;
+  uint16_t section_alignment = 0;
   switch (file_header->machine) {
     case i386:
       {
@@ -146,15 +144,11 @@ int main(int argc, char ** argv) {
         fread(&optional_header, sizeof(OptionalHeader), 1, fd);
         assert(optional_header.magic == PE32); // If this fails we're either dealing with ROM or invalid data
         //printf("NT Magic: %s\n", optional_header.magic);
-        file_alignment = optional_header.file_alignment;
         section_alignment = optional_header.section_alignment;
-        image_base = optional_header.image_base;
 
         // Get the data directory list to get the resource directory location
-        DataDirectory * data_directories = (DataDirectory *) calloc(optional_header.number_of_data_directories, sizeof(DataDirectory));
+        data_directories = (DataDirectory *) calloc(optional_header.number_of_data_directories, sizeof(DataDirectory));
         fread(data_directories, sizeof(DataDirectory), optional_header.number_of_data_directories, fd);
-        resource_directory = data_directories[DIRECTORY_ENTRY_RESOURCE];
-        free(data_directories);
       }
       break;
     case AMD64:
@@ -163,15 +157,11 @@ int main(int argc, char ** argv) {
         OptionalHeader64 optional_header;
         fread(&optional_header, sizeof(OptionalHeader64), 1, fd);
         assert(optional_header.magic == PE32PLUS); // If this fails we're either dealing with ROM or invalid data
-        file_alignment = optional_header.file_alignment;
         section_alignment = optional_header.section_alignment;
-        image_base = optional_header.image_base;
   
         // Get the data directory list to get the resource directory location
         DataDirectory * data_directories = (DataDirectory *) calloc(optional_header.number_of_data_directories, sizeof(DataDirectory));
         fread(data_directories, sizeof(DataDirectory), optional_header.number_of_data_directories, fd);
-        resource_directory = data_directories[DIRECTORY_ENTRY_RESOURCE];
-        free(data_directories);
       }
       break;
     default:
@@ -179,37 +169,29 @@ int main(int argc, char ** argv) {
       return 3;
       break;
   }
-  
-  if (resource_directory.offset == 0 || resource_directory.size == 0) {
+ 
+  if (data_directories[DIRECTORY_ENTRY_RESOURCE].offset == 0 || data_directories[DIRECTORY_ENTRY_RESOURCE].size == 0) {
     printf("No resources found in file %s\n", argv[1]);
     return 4;
   }
+  free(data_directories);
 
   // Read the section headers
   uint32_t resource_offset;
-  uint32_t virtual_offset_correction; 
   SectionHeader * section_headers = (SectionHeader *) calloc(file_header->number_of_sections, sizeof(SectionHeader));
   fread(section_headers, sizeof(SectionHeader), file_header->number_of_sections, fd);
 
-  printf("Image base:%i\n", image_base);
-  printf("Current position: %i\n", ftell(fd));
   fseek(fd, (ftell(fd) + (section_alignment-1)) &~ (section_alignment-1), SEEK_SET); // Align current position to section alignment
-  printf("New aligned position: %i\n", ftell(fd));
 
-  for(int i = 0; i < file_header->number_of_sections; i++) {
-    printf("Position of %s: %i\n", section_headers[i].name, ftell(fd));
-    printf("%s: vsize=%i, vaddress=%i, size=%i, address=%i\n", section_headers[i].name, section_headers[i].virtual_size, section_headers[i].virtual_address, section_headers[i].size, section_headers[i].address);
-    
+  for(int i = 0; i < file_header->number_of_sections; i++) {   
     if (strcmp(".rsrc", section_headers[i].name) == 0) {
       printf("Found .rsrc\n");
       resource_offset = section_headers[i].address;
-      virtual_offset_correction = section_headers[i].virtual_address - section_headers[i].address;
-      printf("Difference between virtual(%i) and real(%i) is %i\n", section_headers[i].virtual_address, section_headers[i].address, virtual_offset_correction);
     }
 
     fseek(fd, (section_headers[i].size + (section_alignment-1)) &~ (section_alignment-1), SEEK_CUR);    
   }
-  printf("End of file reached at: %i\n", ftell(fd));
+  assert(ftell(fd) == file_size);
 
   setlocale(LC_ALL, "");
 
@@ -229,9 +211,7 @@ int main(int argc, char ** argv) {
     int is_resource_data_entry_offset = ((name_directory_entries[i].data_or_subdirectory_offset & 0x80000000) == 0);
     uint16_t name_length;
     uint32_t name_offset = (name_directory_entries[i].name_offset_and_id & 0x7FFFFFFF);
-    if (name_offset != 0){
-      printf("Name offset: %i\n", name_offset);
-    }
+
     fseek(fd, resource_offset + name_offset, SEEK_SET);
     fread(&name_length, sizeof(uint16_t), 1, fd);
     
