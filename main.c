@@ -44,23 +44,18 @@ typedef struct __attribute__((packed)) {
 
 typedef struct __attribute__((packed)) {
   uint16_t  magic;
-  uint8_t   unused1[18];
-  uint32_t  base_of_code; // Relative to image_base
-  uint32_t  base_of_data;
-  uint32_t  image_base;
+  uint8_t   unused1[30];
   uint32_t  section_alignment;
   uint32_t  file_alignment;
-  uint8_t   unused3[52];
+  uint8_t   unused2[52];
   uint32_t  number_of_data_directories;
 } OptionalHeader;
 
 typedef struct __attribute__((packed)) {
   uint16_t  magic;
-  uint8_t   unused1[18];
-  uint32_t  base_of_code; // Relative to image_base
-  uint64_t  image_base;
+  uint8_t   unused1[30];
   uint32_t  section_alignment;
-  uint32_t  file_alignment; // After this is 40
+  uint32_t  file_alignment;
   uint8_t   unused2[68];
   uint32_t  number_of_data_directories;
 } OptionalHeader64;
@@ -136,6 +131,8 @@ int main(int argc, char ** argv) {
 
   DataDirectory * data_directories = NULL;
   uint16_t section_alignment = 0;
+  uint16_t file_alignment = 0;
+  uint32_t number_of_data_directories = 0;
   switch (file_header->machine) {
     case i386:
       {
@@ -145,6 +142,7 @@ int main(int argc, char ** argv) {
         assert(optional_header.magic == PE32); // If this fails we're either dealing with ROM or invalid data
         //printf("NT Magic: %s\n", optional_header.magic);
         section_alignment = optional_header.section_alignment;
+        number_of_data_directories = optional_header.number_of_data_directories;
 
         // Get the data directory list to get the resource directory location
         data_directories = (DataDirectory *) calloc(optional_header.number_of_data_directories, sizeof(DataDirectory));
@@ -158,9 +156,11 @@ int main(int argc, char ** argv) {
         fread(&optional_header, sizeof(OptionalHeader64), 1, fd);
         assert(optional_header.magic == PE32PLUS); // If this fails we're either dealing with ROM or invalid data
         section_alignment = optional_header.section_alignment;
+        number_of_data_directories = optional_header.number_of_data_directories;
+        printf("Section alignment and file alignment: %i, %i\n", section_alignment, optional_header.file_alignment);
   
         // Get the data directory list to get the resource directory location
-        DataDirectory * data_directories = (DataDirectory *) calloc(optional_header.number_of_data_directories, sizeof(DataDirectory));
+        data_directories = (DataDirectory *) calloc(optional_header.number_of_data_directories, sizeof(DataDirectory));
         fread(data_directories, sizeof(DataDirectory), optional_header.number_of_data_directories, fd);
       }
       break;
@@ -170,7 +170,8 @@ int main(int argc, char ** argv) {
       break;
   }
  
-  if (data_directories[DIRECTORY_ENTRY_RESOURCE].offset == 0 || data_directories[DIRECTORY_ENTRY_RESOURCE].size == 0) {
+  printf("Number of directories:%i\n", number_of_data_directories);
+  if (number_of_data_directories > DIRECTORY_ENTRY_RESOURCE && data_directories[DIRECTORY_ENTRY_RESOURCE].offset == 0 || data_directories[DIRECTORY_ENTRY_RESOURCE].size == 0) {
     printf("No resources found in file %s\n", argv[1]);
     return 4;
   }
@@ -183,17 +184,20 @@ int main(int argc, char ** argv) {
 
   fseek(fd, (ftell(fd) + (section_alignment-1)) &~ (section_alignment-1), SEEK_SET); // Align current position to section alignment
 
-  for(int i = 0; i < file_header->number_of_sections; i++) {   
+  for(int i = 0; i < file_header->number_of_sections; i++) {
+    fseek(fd, (section_headers[i].size + (file_alignment-1)) &~ (file_alignment-1), SEEK_CUR);    
     if (strcmp(".rsrc", section_headers[i].name) == 0) {
       printf("Found .rsrc\n");
       resource_offset = section_headers[i].address;
     }
-
-    fseek(fd, (section_headers[i].size + (section_alignment-1)) &~ (section_alignment-1), SEEK_CUR);    
+    if (i == file_header->number_of_sections - 1) {
+      fseek(fd, (section_headers[i].size + (file_alignment-1)) &~ (file_alignment-1), SEEK_CUR);
+    } else {
+      fseek(fd, (section_headers[i].size + (section_alignment-1)) &~ (section_alignment-1), SEEK_CUR);
+    }
   }
-  assert(ftell(fd) == file_size);
 
-  setlocale(LC_ALL, "");
+  assert(ftell(fd) <= file_size); // Make sure the file size matches our expectations.
 
   // Read the 
   fseek(fd, resource_offset, SEEK_SET);
