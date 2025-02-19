@@ -113,6 +113,9 @@ int main(int argc, char ** argv) {
     printf("Could not read file %s\n", argv[1]);
     return 2;
   }
+  fseek(fd, 0, SEEK_END);
+  printf("Size of file: %i\n", ftell(fd));
+  fseek(fd, 0, SEEK_SET);
 
   // Get NT header offset from DOS header
   DosHeader * dos_header = (DosHeader *) calloc(1, sizeof(DosHeader));
@@ -134,6 +137,7 @@ int main(int argc, char ** argv) {
   DataDirectory resource_directory;
   uint16_t file_alignment;
   uint16_t section_alignment;
+  uint32_t  image_base;
   switch (file_header->machine) {
     case i386:
       {
@@ -144,6 +148,7 @@ int main(int argc, char ** argv) {
         //printf("NT Magic: %s\n", optional_header.magic);
         file_alignment = optional_header.file_alignment;
         section_alignment = optional_header.section_alignment;
+        image_base = optional_header.image_base;
 
         // Get the data directory list to get the resource directory location
         DataDirectory * data_directories = (DataDirectory *) calloc(optional_header.number_of_data_directories, sizeof(DataDirectory));
@@ -160,6 +165,7 @@ int main(int argc, char ** argv) {
         assert(optional_header.magic == PE32PLUS); // If this fails we're either dealing with ROM or invalid data
         file_alignment = optional_header.file_alignment;
         section_alignment = optional_header.section_alignment;
+        image_base = optional_header.image_base;
   
         // Get the data directory list to get the resource directory location
         DataDirectory * data_directories = (DataDirectory *) calloc(optional_header.number_of_data_directories, sizeof(DataDirectory));
@@ -173,18 +179,42 @@ int main(int argc, char ** argv) {
       return 3;
       break;
   }
-  free(file_header);
-
   
   if (resource_directory.offset == 0 || resource_directory.size == 0) {
     printf("No resources found in file %s\n", argv[1]);
     return 4;
   }
 
+  // Read the section headers
+  uint32_t resource_offset;
+  uint32_t virtual_offset_correction; 
+  SectionHeader * section_headers = (SectionHeader *) calloc(file_header->number_of_sections, sizeof(SectionHeader));
+  fread(section_headers, sizeof(SectionHeader), file_header->number_of_sections, fd);
+
+  printf("Image base:%i\n", image_base);
+  printf("Current position: %i\n", ftell(fd));
+  fseek(fd, (ftell(fd) + (section_alignment-1)) &~ (section_alignment-1), SEEK_SET); // Align current position to section alignment
+  printf("New aligned position: %i\n", ftell(fd));
+
+  for(int i = 0; i < file_header->number_of_sections; i++) {
+    printf("Position of %s: %i\n", section_headers[i].name, ftell(fd));
+    printf("%s: vsize=%i, vaddress=%i, size=%i, address=%i\n", section_headers[i].name, section_headers[i].virtual_size, section_headers[i].virtual_address, section_headers[i].size, section_headers[i].address);
+    
+    if (strcmp(".rsrc", section_headers[i].name) == 0) {
+      printf("Found .rsrc\n");
+      resource_offset = section_headers[i].address;
+      virtual_offset_correction = section_headers[i].virtual_address - section_headers[i].address;
+      printf("Difference between virtual(%i) and real(%i) is %i\n", section_headers[i].virtual_address, section_headers[i].address, virtual_offset_correction);
+    }
+
+    fseek(fd, (section_headers[i].size + (section_alignment-1)) &~ (section_alignment-1), SEEK_CUR);    
+  }
+  printf("End of file reached at: %i\n", ftell(fd));
+
   setlocale(LC_ALL, "");
 
   // Read the 
-  fseek(fd, resource_directory.offset, SEEK_SET);
+  fseek(fd, resource_offset, SEEK_SET);
   ResourceDirectoryTable * resource_directory_table = (ResourceDirectoryTable *) calloc(1, sizeof(ResourceDirectoryTable));
   fread(resource_directory_table, sizeof(ResourceDirectoryTable), 1, fd);
   
@@ -193,35 +223,45 @@ int main(int argc, char ** argv) {
   fread(name_directory_entries, sizeof(ResourceDirectoryEntry), resource_directory_table->number_of_name_entries, fd);
   fread(id_directory_entries, sizeof(ResourceDirectoryEntry), resource_directory_table->number_of_id_entries, fd);
   int64_t resources_start = ftell(fd);
+  printf("Number of name entries: %i\n", resource_directory_table->number_of_name_entries);
+  printf("Number of id entries: %i\n", resource_directory_table->number_of_id_entries);
   for(int i = 0; i < resource_directory_table->number_of_name_entries; i++) {
-    // int is_resource_data_entry_offset = ((name_directory_entries[i].data_or_subdirectory_offset & 0x80000000) == 0);
-    // uint16_t name_length;
-    // uint32_t name_offset = (name_directory_entries[i].name_offset_and_id & 0x7FFFFFFF);
-    // fseek(fd, resource_directory.offset + name_offset, SEEK_SET);
-    // fread(&name_length, sizeof(uint16_t), 1, fd);
+    int is_resource_data_entry_offset = ((name_directory_entries[i].data_or_subdirectory_offset & 0x80000000) == 0);
+    uint16_t name_length;
+    uint32_t name_offset = (name_directory_entries[i].name_offset_and_id & 0x7FFFFFFF);
+    if (name_offset != 0){
+      printf("Name offset: %i\n", name_offset);
+    }
+    fseek(fd, resource_offset + name_offset, SEEK_SET);
+    fread(&name_length, sizeof(uint16_t), 1, fd);
     
-    // uint16_t * name = (uint16_t *) calloc(1, sizeof(uint16_t));
-    // uint8_t * name_fixed = (uint8_t *) calloc(name_length, sizeof(uint8_t));
+    uint16_t * name = (uint16_t *) calloc(name_length, sizeof(uint16_t));
+    uint8_t * name_fixed = (uint8_t *) calloc(name_length, sizeof(uint8_t));
     
     // fread(name, sizeof(uint16_t), 1, fd);
-    // wctomb(name_fixed, name);
 
-    // // if (name_length < 128 && name_length > 0) {
-    //   printf("length %i, name: %ls\n", name_length, name);
-    //   continue;
-    // // }
-    // // printf("Found name: %s\n", name);
-    // if (is_resource_data_entry_offset) {
+    fread(name, sizeof(uint16_t), name_length, fd);
+    for(int i = 0; i < name_length; i++) {
+      name_fixed[i] = (uint8_t) (name[i] & 0x0000FFFF);
+    }
 
-    // } else {
+    if (name_length != 0) {
+      printf("length %i, name: %c%c%c%c or %s\n", name_length, name[0], name[1], name[2], name[3], name_fixed);
 
-    // }
-    // free(name);
+      continue;
+    }
+    printf("Found name: %s\n", name);
+    if (is_resource_data_entry_offset) {
+
+    } else {
+
+    }
+    free(name);
+    free(name_fixed);
   }
-
-
-
+  
   fclose(fd);
+  free(file_header);
 
   return 0; 
 }
