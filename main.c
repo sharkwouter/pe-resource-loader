@@ -86,10 +86,10 @@ typedef struct __attribute__((packed)) {
 } ResourceDirectoryEntry;
 
 typedef struct __attribute__((packed)) {
-  uint32_t  code_page;
   uint32_t  offset_to_data;
-  uint32_t  reserved;
   uint32_t  size;
+  uint32_t  code_page;
+  uint32_t  reserved;
 } ResourceDataEntry;
 
 uint8_t * read_directory_name(FILE * fd, uint32_t resource_offset, uint32_t name_offset, uint16_t * length) {
@@ -124,15 +124,44 @@ uint8_t * read_directory_name(FILE * fd, uint32_t resource_offset, uint32_t name
   return name;
 }
 
-void read_directory_entry(uint32_t offset) {
+void read_data(FILE * fd, uint32_t resource_offset, uint32_t data_offset, uint32_t size) {
+  uint32_t offset = resource_offset + data_offset;
 
+  uint8_t * data = (uint8_t *) calloc(sizeof(uint8_t), size);
+  fseek(fd, offset, SEEK_SET);
+  fread(data, sizeof(uint8_t), size, fd);
+
+  if (data[1] == '\0') {
+    uint8_t * string = (uint8_t *) calloc(sizeof(uint8_t), size / 2);
+    size_t current_char = 0;
+    for (int i = 0; i < size; i+=2) {
+      string[current_char] = data[i];
+      current_char++;
+    }
+    printf("Data found: %s\n", string);
+  } else {
+    printf("Data found: %s\n", data);
+  }
+
+  free(data);
+}
+
+void read_directory_entry(FILE * fd, uint32_t resource_offset, uint32_t entry_offset) {
+  uint32_t offset = resource_offset + entry_offset;
+
+  ResourceDataEntry resource_directory_entry;
+  fseek(fd, offset, SEEK_SET);
+  fread(&resource_directory_entry, sizeof(ResourceDataEntry), 1, fd);
+
+  // printf("Offset is: %i\n", resource_directory_entry.offset_to_data);
+  read_data(fd, resource_offset, resource_directory_entry.offset_to_data, resource_directory_entry.size);
 }
 
 void read_directory_table(FILE * fd, uint32_t resource_offset, uint32_t directory_offset) {
-  // Read the table
   uint32_t offset = resource_offset + (directory_offset & 0x7FFFFFFF);
-  fseek(fd, offset, SEEK_SET);
+
   ResourceDirectoryTable resource_directory_table;
+  fseek(fd, offset, SEEK_SET);
   fread(&resource_directory_table, sizeof(ResourceDirectoryTable), 1, fd);
   uint16_t entry_count = resource_directory_table.number_of_name_entries + resource_directory_table.number_of_id_entries;
 
@@ -141,17 +170,19 @@ void read_directory_table(FILE * fd, uint32_t resource_offset, uint32_t director
   for (int i = 0; i < entry_count; i++) {
     int is_data = ((directory_entries[i].data_or_subdirectory_offset & 0x80000000) == 0);
     int is_named = ((directory_entries[i].name_offset_or_id & 0x80000000) > 0);
-    if (is_named) {
-      uint8_t * name = read_directory_name(fd, resource_offset, directory_entries[i].name_offset_or_id, NULL);
-      if (name != NULL) {
-        printf("Found name: %s\n", name);
-        free(name);
-      }
-    } else {
-      printf("Found id: %u\n", directory_entries[i].name_offset_or_id);
-    }
+
     if (is_data) {
+      read_directory_entry(fd, resource_offset, directory_entries[i].data_or_subdirectory_offset);
     } else {
+      if (is_named) {
+        uint8_t * name = read_directory_name(fd, resource_offset, directory_entries[i].name_offset_or_id, NULL);
+        if (name != NULL) {
+          // printf("Found data with name: %s\n", name);
+          free(name);
+        }
+      } else {
+        // printf("Found data with id: %u\n", directory_entries[i].name_offset_or_id);
+      }
       read_directory_table(fd, resource_offset, directory_entries[i].data_or_subdirectory_offset);
     }
   }
