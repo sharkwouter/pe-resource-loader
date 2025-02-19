@@ -81,9 +81,81 @@ typedef struct __attribute__((packed)) {
 } ResourceDirectoryTable;
 
 typedef struct __attribute__((packed)) {
-  uint32_t  name_offset_and_id;
+  uint32_t  name_offset_or_id;
   uint32_t  data_or_subdirectory_offset;
 } ResourceDirectoryEntry;
+
+typedef struct __attribute__((packed)) {
+  uint32_t  code_page;
+  uint32_t  offset_to_data;
+  uint32_t  reserved;
+  uint32_t  size;
+} ResourceDataEntry;
+
+uint8_t * read_directory_name(FILE * fd, uint32_t resource_offset, uint32_t name_offset, uint16_t * length) {
+  uint16_t name_length;
+  uint32_t offset = resource_offset + (name_offset & 0x7FFFFFFF);
+  fseek(fd, offset, SEEK_SET);
+  fread(&name_length, sizeof(uint16_t), 1, fd);
+  if (name_length < 1) {
+    return NULL;
+  }
+
+  uint16_t * name_wide = (uint16_t *) calloc(name_length, sizeof(uint16_t));
+  if (NULL == name_wide) {
+    return NULL;
+  }
+  fread(name_wide, sizeof(uint16_t), name_length, fd);
+
+  uint8_t * name = (uint8_t *) calloc(name_length, sizeof(uint8_t));
+  if (NULL == name) {
+    free(name_wide);
+    return NULL;
+  }
+
+  for(int i = 0; i < name_length; i++) {
+    name[i] = (uint8_t) name_wide[i];
+  }
+  if (length != NULL) {
+    *length = name_length;
+  }
+  free(name_wide);
+
+  return name;
+}
+
+void read_directory_entry(uint32_t offset) {
+
+}
+
+void read_directory_table(FILE * fd, uint32_t resource_offset, uint32_t directory_offset) {
+  // Read the table
+  uint32_t offset = resource_offset + (directory_offset & 0x7FFFFFFF);
+  fseek(fd, offset, SEEK_SET);
+  ResourceDirectoryTable resource_directory_table;
+  fread(&resource_directory_table, sizeof(ResourceDirectoryTable), 1, fd);
+  uint16_t entry_count = resource_directory_table.number_of_name_entries + resource_directory_table.number_of_id_entries;
+
+  ResourceDirectoryEntry * directory_entries = (ResourceDirectoryEntry *) calloc(entry_count, sizeof(ResourceDirectoryEntry));
+  fread(directory_entries, sizeof(ResourceDirectoryEntry), entry_count, fd);
+  for (int i = 0; i < entry_count; i++) {
+    int is_data = ((directory_entries[i].data_or_subdirectory_offset & 0x80000000) == 0);
+    int is_named = ((directory_entries[i].name_offset_or_id & 0x80000000) > 0);
+    if (is_named) {
+      uint8_t * name = read_directory_name(fd, resource_offset, directory_entries[i].name_offset_or_id, NULL);
+      if (name != NULL) {
+        printf("Found name: %s\n", name);
+        free(name);
+      }
+    } else {
+      printf("Found id: %u\n", directory_entries[i].name_offset_or_id);
+    }
+    if (is_data) {
+    } else {
+      read_directory_table(fd, resource_offset, directory_entries[i].data_or_subdirectory_offset);
+    }
+  }
+}
 
 int main(int argc, char ** argv) {
   // Make sure the above structs are the same size as they are on 
@@ -101,23 +173,18 @@ int main(int argc, char ** argv) {
     return 1;
   }
 
-  
   printf("Opening file %s\n", argv[1]);
   FILE * fd = fopen(argv[1], "rb");
   if (fd == NULL) {
     printf("Could not read file %s\n", argv[1]);
     return 2;
   }
-  fseek(fd, 0, SEEK_END);
-  uint32_t file_size = ftell(fd);
-  fseek(fd, 0, SEEK_SET);
 
   // Get NT header offset from DOS header
-  DosHeader * dos_header = (DosHeader *) calloc(1, sizeof(DosHeader));
-  fread(dos_header, sizeof(DosHeader), 1, fd);
-  assert(dos_header->magic == MZ); // Make sure the magic number in the DOS header is set
-  assert(fseek(fd, dos_header->nt_header_offset, SEEK_SET) == 0); // Navigate to the NT header offset
-  free(dos_header);
+  DosHeader dos_header;
+  fread(&dos_header, sizeof(DosHeader), 1, fd);
+  assert(dos_header.magic == MZ); // Make sure the magic number in the DOS header is set
+  assert(fseek(fd, dos_header.nt_header_offset, SEEK_SET) == 0); // Navigate to the NT header offset
 
   // Make sure the NT signature is valid
   uint8_t * nt_signature = (uint8_t *) calloc(1, NT_SIGNATURE_SIZE);
@@ -188,51 +255,7 @@ int main(int argc, char ** argv) {
     }
   }
 
-  // Read the 
-  fseek(fd, resource_offset, SEEK_SET);
-  ResourceDirectoryTable * resource_directory_table = (ResourceDirectoryTable *) calloc(1, sizeof(ResourceDirectoryTable));
-  fread(resource_directory_table, sizeof(ResourceDirectoryTable), 1, fd);
-  
-  ResourceDirectoryEntry * name_directory_entries = (ResourceDirectoryEntry *) calloc(resource_directory_table->number_of_name_entries, sizeof(ResourceDirectoryEntry));
-  ResourceDirectoryEntry * id_directory_entries = (ResourceDirectoryEntry *) calloc(resource_directory_table->number_of_id_entries, sizeof(ResourceDirectoryEntry));
-  fread(name_directory_entries, sizeof(ResourceDirectoryEntry), resource_directory_table->number_of_name_entries, fd);
-  fread(id_directory_entries, sizeof(ResourceDirectoryEntry), resource_directory_table->number_of_id_entries, fd);
-  int64_t resources_start = ftell(fd);
-  printf("Number of name entries: %i\n", resource_directory_table->number_of_name_entries);
-  printf("Number of id entries: %i\n", resource_directory_table->number_of_id_entries);
-  for(int i = 0; i < resource_directory_table->number_of_name_entries; i++) {
-    int is_resource_data_entry_offset = ((name_directory_entries[i].data_or_subdirectory_offset & 0x80000000) == 0);
-    uint16_t name_length;
-    uint32_t name_offset = (name_directory_entries[i].name_offset_and_id & 0x7FFFFFFF);
-
-    fseek(fd, resource_offset + name_offset, SEEK_SET);
-    fread(&name_length, sizeof(uint16_t), 1, fd);
-    
-    uint16_t * name = (uint16_t *) calloc(name_length, sizeof(uint16_t));
-    uint8_t * name_fixed = (uint8_t *) calloc(name_length, sizeof(uint8_t));
-    
-    // fread(name, sizeof(uint16_t), 1, fd);
-
-    fread(name, sizeof(uint16_t), name_length, fd);
-    for(int i = 0; i < name_length; i++) {
-      name_fixed[i] = (uint8_t) (name[i] & 0x0000FFFF);
-    }
-
-    if (name_length != 0) {
-      printf("length %i, name: %s\n", name_length, name_fixed);
-
-      continue;
-    }
-    printf("Found name: %s\n", name);
-    if (is_resource_data_entry_offset) {
-
-    } else {
-
-    }
-    free(name);
-    free(name_fixed);
-  }
-  
+  read_directory_table(fd, resource_offset, 0);
   fclose(fd);
   free(file_header);
 
