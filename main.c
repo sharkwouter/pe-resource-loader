@@ -246,7 +246,7 @@ int main(int argc, char ** argv) {
     }
 
     if (name_length != 0) {
-      printf("length %i, name: %c%c%c%c or %s\n", name_length, name[0], name[1], name[2], name[3], name_fixed);
+      printf("length %i, name: %s\n", name_length, name_fixed);
 
       continue;
     }
