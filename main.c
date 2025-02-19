@@ -181,23 +181,12 @@ int main(int argc, char ** argv) {
   uint32_t resource_offset;
   SectionHeader * section_headers = (SectionHeader *) calloc(file_header->number_of_sections, sizeof(SectionHeader));
   fread(section_headers, sizeof(SectionHeader), file_header->number_of_sections, fd);
-
-  fseek(fd, (ftell(fd) + (section_alignment-1)) &~ (section_alignment-1), SEEK_SET); // Align current position to section alignment
-
   for(int i = 0; i < file_header->number_of_sections; i++) {
-    fseek(fd, (section_headers[i].size + (file_alignment-1)) &~ (file_alignment-1), SEEK_CUR);    
     if (strcmp(".rsrc", section_headers[i].name) == 0) {
       printf("Found .rsrc\n");
       resource_offset = section_headers[i].address;
     }
-    if (i == file_header->number_of_sections - 1) {
-      fseek(fd, (section_headers[i].size + (file_alignment-1)) &~ (file_alignment-1), SEEK_CUR);
-    } else {
-      fseek(fd, (section_headers[i].size + (section_alignment-1)) &~ (section_alignment-1), SEEK_CUR);
-    }
   }
-
-  assert(ftell(fd) <= file_size); // Make sure the file size matches our expectations.
 
   // Read the 
   fseek(fd, resource_offset, SEEK_SET);
