@@ -23,6 +23,7 @@
 #define OPTIONAL_HEADER_SIZE 96
 #define OPTIONAL_HEADER_64_SIZE 116
 #define DATA_DIRECTORY_SIZE 8
+#define SECTION_HEADER_SIZE 40
 #define NT_SIGNATURE_SIZE 4
 #define RESOURCE_DIRECTORY_TABLE_SIZE 16
 #define RESOURCE_DIRECTORY_ENTRY_SIZE 8
@@ -64,6 +65,15 @@ typedef struct __attribute__((packed)) {
 } DataDirectory;
 
 typedef struct __attribute__((packed)) {
+  uint8_t  name[SHORT_NAME_SIZE];
+  uint32_t  virtual_size;
+  uint32_t  virtual_address;
+  uint32_t  size;
+  uint32_t  address;
+  uint8_t   unused[16];
+} SectionHeader;
+
+typedef struct __attribute__((packed)) {
   uint8_t   unused[12];
   uint16_t  number_of_name_entries;
   uint16_t  number_of_id_entries;
@@ -81,6 +91,7 @@ int main(int argc, char ** argv) {
   assert(sizeof(OptionalHeader) == OPTIONAL_HEADER_SIZE);
   assert(sizeof(OptionalHeader64) == OPTIONAL_HEADER_64_SIZE);
   assert(sizeof(DataDirectory) == DATA_DIRECTORY_SIZE);
+  assert(sizeof(SectionHeader) == SECTION_HEADER_SIZE);
   assert(sizeof(ResourceDirectoryTable) == RESOURCE_DIRECTORY_TABLE_SIZE);
   assert(sizeof(ResourceDirectoryEntry) == RESOURCE_DIRECTORY_ENTRY_SIZE);
 
