@@ -151,37 +151,56 @@ uint8_t * read_directory_name(FILE * fd, uint32_t resource_offset, uint32_t name
   return name;
 }
 
-void read_data(FILE * fd, uint32_t resource_offset, uint32_t data_offset, uint32_t size) {
+void read_string(FILE * fd, uint32_t resource_offset, uint32_t data_offset, uint32_t length) {
   uint32_t offset = resource_offset + data_offset;
 
-  uint8_t * data = (uint8_t *) calloc(sizeof(uint8_t), size);
   fseek(fd, offset, SEEK_SET);
-  fread(data, sizeof(uint8_t), size, fd);
+  uint16_t * string = (uint16_t *) calloc(sizeof(uint16_t), length);
+  fread(string, sizeof(uint16_t), length, fd);
 
-  if (data[1] == '\0') {
-    uint8_t * string = (uint8_t *) calloc(sizeof(uint8_t), size / 2);
-    size_t current_char = 0;
-    for (int i = 0; i < size; i+=2) {
-      string[current_char] = data[i];
-      current_char++;
-    }
-    // printf("Data found: %s\n", string);
-  } else {
-    // printf("Data found: %s\n", data);
+  uint8_t * string_readable = (uint8_t *) calloc(sizeof(uint8_t), length);
+  for (int i = 0; i < length; i++) {
+    string_readable[i] = (uint8_t) (string[i] & 0x0000FFFF);
   }
+  free(string);
 
-  free(data);
+  printf("String of length %i: %s\n", length, string_readable);
+  free(string_readable);
 }
 
 void read_directory_entry(FILE * fd, uint32_t resource_offset, uint32_t entry_offset) {
   uint32_t offset = resource_offset + entry_offset;
-
   ResourceDataEntry resource_directory_entry;
-  fseek(fd, offset, SEEK_SET);
   fread(&resource_directory_entry, sizeof(ResourceDataEntry), 1, fd);
 
-  // printf("Offset is: %i\n", resource_directory_entry.offset_to_data);
-  read_data(fd, resource_offset, resource_directory_entry.offset_to_data, resource_directory_entry.size);
+  read_string(fd, resource_offset, resource_directory_entry.offset_to_data, resource_directory_entry.reserved);
+}
+
+void read_string_table(FILE * fd, uint32_t resource_offset, uint32_t directory_offset) {
+  uint32_t offset = resource_offset + (directory_offset & 0x7FFFFFFF);
+
+  ResourceDirectoryTable resource_directory_table;
+  fseek(fd, offset, SEEK_SET);
+  fread(&resource_directory_table, sizeof(ResourceDirectoryTable), 1, fd);
+  uint16_t entry_count = resource_directory_table.number_of_name_entries + resource_directory_table.number_of_id_entries;
+
+  ResourceDirectoryEntry * directory_entries = (ResourceDirectoryEntry *) calloc(entry_count, sizeof(ResourceDirectoryEntry));
+  fread(directory_entries, sizeof(ResourceDirectoryEntry), entry_count, fd);
+  for (int i = 0; i < entry_count; i++) {
+    int is_data = ((directory_entries[i].data_or_subdirectory_offset & 0x80000000) == 0);
+    int is_named = ((directory_entries[i].name_offset_or_id & 0x80000000) > 0);
+
+    if (is_data) {
+      read_directory_entry(fd, resource_offset, directory_entries[i].data_or_subdirectory_offset);
+    } else {
+      if (is_named) {
+        printf("Name entry found for some reason\n");
+      } else {
+        printf("Found id: %i\n", directory_entries[i].name_offset_or_id);
+        read_string_table(fd, resource_offset, directory_entries[i].data_or_subdirectory_offset & 0x7FFFFFFF);
+      }
+    }
+  }
 }
 
 void read_directory_table(FILE * fd, uint32_t resource_offset, uint32_t directory_offset) {
@@ -228,6 +247,7 @@ void read_directory_table(FILE * fd, uint32_t resource_offset, uint32_t director
             break;
           case RT_STRING:
             printf("Found string table\n");
+            read_string_table(fd, resource_offset, directory_entries[i].data_or_subdirectory_offset & 0x7FFFFFFF);
             break;
           case RT_FONTDIR:
             printf("Found font table\n");
