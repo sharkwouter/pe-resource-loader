@@ -18,6 +18,35 @@
 
 #define DIRECTORY_ENTRY_RESOURCE 2
 
+
+
+#define SHORT_NAME_SIZE 8
+
+// Resource ID types
+#define RT_CURSOR 1
+#define RT_BITMAP 2
+#define RT_ICON 3
+#define RT_MENU 4
+#define RT_DIALOG 5
+#define RT_STRING 6
+#define RT_FONTDIR 7
+#define RT_FONT 8
+#define RT_ACCELERATOR 9
+#define RT_RCDATA 10
+#define RT_MESSAGETABLE 11
+#define RT_VERSION 16
+#define RT_DLGINCLUDE 17
+#define RT_PLUGPLAY 19
+#define RT_VXD 20
+#define RT_ANICURSOR 21
+#define RT_ANIICON 22
+#define RT_HTML 23
+#define RT_MANIFEST 24
+
+// Resource name types
+#define RT_NAME_TEXT "TEXT"
+
+// Valid sizes for structs used
 #define DOS_HEADER_SIZE 64
 #define FILE_HEADER_SIZE 20
 #define OPTIONAL_HEADER_SIZE 96
@@ -27,8 +56,6 @@
 #define NT_SIGNATURE_SIZE 4
 #define RESOURCE_DIRECTORY_TABLE_SIZE 16
 #define RESOURCE_DIRECTORY_ENTRY_SIZE 8
-
-#define SHORT_NAME_SIZE 8
 
 typedef struct __attribute__((packed)) {
   uint16_t  magic;
@@ -138,9 +165,9 @@ void read_data(FILE * fd, uint32_t resource_offset, uint32_t data_offset, uint32
       string[current_char] = data[i];
       current_char++;
     }
-    printf("Data found: %s\n", string);
+    // printf("Data found: %s\n", string);
   } else {
-    printf("Data found: %s\n", data);
+    // printf("Data found: %s\n", data);
   }
 
   free(data);
@@ -176,14 +203,77 @@ void read_directory_table(FILE * fd, uint32_t resource_offset, uint32_t director
     } else {
       if (is_named) {
         uint8_t * name = read_directory_name(fd, resource_offset, directory_entries[i].name_offset_or_id, NULL);
-        if (name != NULL) {
-          // printf("Found data with name: %s\n", name);
-          free(name);
-        }
+        printf("Found data with name: %s\n", name);
+        // if (name != NULL && strcmp(name, "TEXT") == 0) {
+        //   printf("Found data with name: %s\n", name);
+        free(name);
+        //   // exit(0);
+        // }
       } else {
-        // printf("Found data with id: %u\n", directory_entries[i].name_offset_or_id);
+        switch (directory_entries[i].name_offset_or_id) {
+          case RT_CURSOR:
+            printf("Found cursor table\n");
+            break;
+          case RT_BITMAP:
+            printf("Found bitmap table\n");
+            break;
+          case RT_ICON:
+            printf("Found icon table\n");
+            break;
+          case RT_MENU:
+            printf("Found menu table\n");
+            break;
+          case RT_DIALOG:
+            printf("Found dialog table\n");
+            break;
+          case RT_STRING:
+            printf("Found string table\n");
+            break;
+          case RT_FONTDIR:
+            printf("Found font table\n");
+            break;
+          case RT_FONT:
+            printf("Found font\n");
+            break;
+          case RT_ACCELERATOR:
+            printf("Found accelerator table\n");
+            break;
+          case RT_RCDATA:
+            printf("Found rcdata table\n");
+            break;
+          case RT_MESSAGETABLE:
+            printf("Found message table\n");
+            break;
+          case RT_VERSION:
+            printf("Found version table\n");
+            break;
+          case RT_DLGINCLUDE:
+            printf("Found dlginclude table\n");
+            break;
+          case RT_PLUGPLAY:
+            printf("Found plugplay table\n");
+            break;
+          case RT_VXD:
+            printf("Found vxd table\n");
+            break;
+          case RT_ANICURSOR:
+            printf("Found anicursor table\n");
+            break;
+          case RT_ANIICON:
+            printf("Found aniicon table\n");
+            break;
+          case RT_HTML:
+            printf("Found html table\n");
+            break;
+          case RT_MANIFEST:
+            printf("Found manifest table\n");
+            break;
+          default:
+            printf("Found unsupported table %i\n", directory_entries[i].name_offset_or_id);
+            break;
+        }
       }
-      read_directory_table(fd, resource_offset, directory_entries[i].data_or_subdirectory_offset);
+      // read_directory_table(fd, resource_offset, directory_entries[i].data_or_subdirectory_offset);
     }
   }
 }
