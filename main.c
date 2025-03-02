@@ -116,12 +116,42 @@ typedef struct __attribute__((packed)) {
 } ResourceDirectoryEntry;
 
 typedef struct __attribute__((packed)) {
-  uint32_t  code_page;
-  uint32_t  reserved;
   uint32_t  offset_to_data;
   uint32_t  size;
-
+  uint32_t  code_page;
+  uint32_t  reserved;
 } ResourceDataEntry;
+
+uint32_t virtual_offset = 0;
+
+uint32_t wide_string_length_with_size(uint16_t * str, uint32_t size) {
+  size_t full_length = size/sizeof(uint16_t);
+  for (int i = 0; i < full_length; i++) {
+    if (str[i] == '\0') {
+      return i;
+    }
+  }
+  return full_length;
+}
+
+uint32_t wide_string_length(uint16_t * str) {
+  return wide_string_length_with_size(str, sizeof(str));
+}
+
+uint8_t * wide_string_to_utf8(uint16_t * str, uint16_t length) {
+  uint8_t * output = (uint8_t *) calloc(length + 1, sizeof(uint8_t));
+
+  for (int i = 0; i < length; i++) {
+    if (str[i] < 128) {
+      output[i] = (uint8_t) str[i];
+    } else {
+      output[i] = '?';  // Not great, but since the game is in english, this should not be used a lot
+    }
+  }
+
+  output[length] = '\0';
+  return output;
+}
 
 uint8_t * read_directory_name(FILE * fd, uint32_t resource_offset, uint32_t name_offset, uint16_t * length) {
   uint16_t name_length;
@@ -138,18 +168,7 @@ uint8_t * read_directory_name(FILE * fd, uint32_t resource_offset, uint32_t name
   }
   fread(name_wide, sizeof(uint16_t), name_length, fd);
 
-  uint8_t * name = (uint8_t *) calloc(name_length, sizeof(uint8_t));
-  if (NULL == name) {
-    free(name_wide);
-    return NULL;
-  }
-
-  for(int i = 0; i < name_length; i++) {
-    name[i] = (uint8_t) name_wide[i];
-  }
-  if (length != NULL) {
-    *length = name_length;
-  }
+  uint8_t * name = wide_string_to_utf8(name_wide, name_length);
   free(name_wide);
 
   return name;
@@ -187,29 +206,19 @@ uint8_t * read_directory_name_iconv(FILE * fd, uint32_t resource_offset, uint32_
   return name;
 }
 
-uint8_t * read_string2(FILE * fd, uint32_t resource_offset, uint32_t name_offset, uint32_t name_length) {
-  uint32_t offset = resource_offset + (name_offset & 0x7FFFFFFF);
+uint8_t * read_string2(FILE * fd, uint32_t resource_offset, uint32_t string_offset, uint32_t size) {
+  uint32_t offset = resource_offset + (string_offset & 0x7FFFFFFF);
 
-  size_t len = name_length *  sizeof(uint16_t);
-  size_t utf8_len = name_length * sizeof(char);
-  
 
-  iconv_t conv = iconv_open("UTF-8", "UTF-16");
   fseek(fd, offset, SEEK_SET);
-  char * name_wide = (char *) calloc(name_length, sizeof(uint16_t));
+  uint16_t * name_wide = (uint16_t *) calloc(size, 1);
   if (NULL == name_wide) {
     return NULL;
   }
-  fread(name_wide, sizeof(uint16_t), name_length, fd);
+  fread(name_wide, 1, size, fd);
 
-  char * name = (char *) calloc(name_length, sizeof(char));
-  iconv(conv, &name_wide, &len, &name, &utf8_len);
-  iconv_close(conv);
-  if (NULL == name) {
-    free(name_wide);
-    return NULL;
-  }
-
+  uint32_t length = wide_string_length_with_size(name_wide, size);
+  uint8_t * name = wide_string_to_utf8(name_wide, length);
   free(name_wide);
 
   return name;
@@ -220,7 +229,7 @@ void read_string(FILE * fd, uint32_t resource_offset, uint32_t data_offset, uint
   uint32_t real_length = length;
 
   fseek(fd, offset, SEEK_SET);
-  // fread(&real_length, sizeof(uint16_t), 1, fd);
+  fread(&real_length, sizeof(uint16_t), 1, fd);
   uint16_t * string = (uint16_t *) calloc(sizeof(uint16_t), real_length);
   fread(string, sizeof(uint16_t), real_length, fd);
 
@@ -235,38 +244,45 @@ void read_string(FILE * fd, uint32_t resource_offset, uint32_t data_offset, uint
 }
 
 void read_directory_entry(FILE * fd, uint32_t resource_offset, uint32_t entry_offset) {
-  uint32_t offset = resource_offset + entry_offset;
+  uint32_t offset = resource_offset + (entry_offset & 0x7FFFFFFF);
+
   ResourceDataEntry resource_directory_entry;
+  fseek(fd, offset, SEEK_SET);
   fread(&resource_directory_entry, sizeof(ResourceDataEntry), 1, fd);
   printf("Data entry read: offset_to_data=%i, size=%i, code_page=%i, reserved=%i\n", resource_directory_entry.offset_to_data, resource_directory_entry.size, resource_directory_entry.code_page, resource_directory_entry.reserved);
-
+  if (resource_directory_entry.code_page > 0 || resource_directory_entry.reserved > 0) {
+    printf("Invalid data entry found\n");
+    exit(15);
+  }
   // uint8_t * name = read_string2(fd, resource_offset, resource_directory_entry.offset_to_data, resource_directory_entry.size);
   // printf("String of length %i: %s\n", resource_directory_entry.size, name);
   // free(name);
 }
 
-void read_data_entry(FILE * fd, uint32_t resource_offset, uint32_t directory_offset) {
-  uint32_t offset = resource_offset + (directory_offset & 0x7FFFFFFF);
+// void read_data_entry(FILE * fd, uint32_t resource_offset, uint32_t directory_offset) {
+//   uint32_t offset = resource_offset + (directory_offset & 0x7FFFFFFF);
 
-  ResourceDirectoryEntry resource_directory_entry;
-  fseek(fd, offset, SEEK_SET);
-  fread(&resource_directory_entry, sizeof(ResourceDirectoryEntry), 1, fd);
-  int is_data = ((resource_directory_entry.data_or_subdirectory_offset & 0x80000000) == 0);
-  int is_named = ((resource_directory_entry.name_offset_or_id & 0x80000000) > 0);
+//   ResourceDirectoryEntry resource_directory_entry;
+//   fseek(fd, offset, SEEK_SET);
+//   fread(&resource_directory_entry, sizeof(ResourceDirectoryEntry), 1, fd);
+//   int is_data = ((resource_directory_entry.data_or_subdirectory_offset & 0x80000000) == 0);
+//   int is_named = ((resource_directory_entry.name_offset_or_id & 0x80000000) > 0);
 
-  if (is_data) {
-    if (is_named) {
-      uint8_t * name = read_directory_name_iconv(fd, resource_offset, resource_directory_entry.name_offset_or_id, NULL);
-      printf("Found data with name: %s\n", name);
-      free(name);
-    } else {
-      printf("Found data with id: %i\n", resource_directory_entry.name_offset_or_id & 0x7FFFFFFF);
-    }
-    read_directory_entry(fd, resource_offset, resource_directory_entry.data_or_subdirectory_offset);
-  } else {
-    printf("This is supposed to be data\n");
-  }
-}
+//   if (is_data) {
+//     if (is_named) {
+//       uint8_t * name = read_directory_name(fd, resource_offset, resource_directory_entry.name_offset_or_id, NULL);
+//       printf("Found data with name: %s\n", name);
+//       free(name);
+//     } else {
+//       uint8_t * name = read_string2(fd, resource_offset, resource_directory_entry.data_or_subdirectory_offset & 0x7FFFFFFF, 10);
+//       printf("Found data with id: %i and offset %i resulting in string: %s\n", resource_directory_entry.name_offset_or_id & 0x7FFFFFFF, resource_directory_entry.data_or_subdirectory_offset & 0x7FFFFFFF, name);
+//       free(name);
+//     }
+//     read_directory_entry(fd, 0, resource_directory_entry.data_or_subdirectory_offset);
+//   } else {
+//     printf("This is supposed to be data\n");
+//   }
+// }
 
 void read_language_directory(FILE * fd, uint32_t resource_offset, uint32_t directory_offset) {
   uint32_t offset = resource_offset + (directory_offset & 0x7FFFFFFF);
@@ -287,7 +303,8 @@ void read_language_directory(FILE * fd, uint32_t resource_offset, uint32_t direc
       } else {
         printf("String is in language with id: %i\n", directory_entries[i].name_offset_or_id);
       }
-      read_data_entry(fd, resource_offset, directory_entries[i].data_or_subdirectory_offset);
+      printf("Offset found: %i, resource_offset=%i, directory_offset=%i\n", directory_entries[i].data_or_subdirectory_offset, resource_offset, (directory_offset & 0x7FFFFFFF));
+      read_directory_entry(fd, resource_offset, directory_entries[i].data_or_subdirectory_offset);
     } else {
       printf("Error: expected pointer to data in language entry\n");
       exit(15);
@@ -310,13 +327,13 @@ void read_string_directory(FILE * fd, uint32_t resource_offset, uint32_t directo
     int is_named = ((directory_entries[i].name_offset_or_id & 0x80000000) > 0);
 
     if (is_data) {
-      printf("Found data with id: %i\n", directory_entries[i].name_offset_or_id);
-      read_data_entry(fd, resource_offset, directory_entries[i].data_or_subdirectory_offset);
+      printf("Found unexpected data in top level string directory\n");
+      return;
     } else {
       if (is_named) {
         printf("Name entry found for some reason\n");
       } else {
-        printf("Found id: %i\n", directory_entries[i].name_offset_or_id);
+        printf("Found type id: %i\n", directory_entries[i].name_offset_or_id);
         read_language_directory(fd, resource_offset, directory_entries[i].data_or_subdirectory_offset);
       }
     }
@@ -338,7 +355,8 @@ void read_type_directory(FILE * fd, uint32_t resource_offset, uint32_t directory
     int is_named = ((directory_entries[i].name_offset_or_id & 0x80000000) > 0);
 
     if (is_data) {
-      read_directory_entry(fd, resource_offset, directory_entries[i].data_or_subdirectory_offset);
+      printf("Found data at top level for some reason\n");
+      return;
     } else {
       if (is_named) {
         uint8_t * name = read_directory_name(fd, resource_offset, directory_entries[i].name_offset_or_id, NULL);
@@ -409,7 +427,6 @@ void read_type_directory(FILE * fd, uint32_t resource_offset, uint32_t directory
             break;
         }
       }
-      // read_type_directory(fd, resource_offset, directory_entries[i].data_or_subdirectory_offset);
     }
   }
 }
@@ -509,14 +526,15 @@ int main(int argc, char ** argv) {
     if (strcmp(".rsrc", section_headers[i].name) == 0) {
       printf("Found .rsrc\n");
       resource_offset = section_headers[i].address;
+      printf("Address: real=%i, virtual=%i\n", section_headers[i].address, section_headers[i].virtual_address);
+      virtual_offset = section_headers[i].virtual_address - section_headers[i].address;
+      printf("Virtual offset is %i\n", virtual_offset);
     }
   }
 
   read_type_directory(fd, resource_offset, 0);
   fclose(fd);
   free(file_header);
-
-  printf("🥳\n");
 
   return 0; 
 }
