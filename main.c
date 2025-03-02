@@ -3,8 +3,6 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
-#include <locale.h>
-#include <iconv.h>
 
 #define MZ 0x5A4D
 
@@ -174,38 +172,6 @@ uint8_t * read_directory_name(FILE * fd, uint32_t resource_offset, uint32_t name
   return name;
 }
 
-uint8_t * read_directory_name_iconv(FILE * fd, uint32_t resource_offset, uint32_t name_offset, uint16_t * length) {
-  uint16_t name_length;
-  uint32_t offset = resource_offset + (name_offset & 0x7FFFFFFF);
-  fseek(fd, offset, SEEK_SET);
-  fread(&name_length, sizeof(uint16_t), 1, fd);
-  if (name_length < 1) {
-    return NULL;
-  }
-
-
-  char * name_wide = (char *) calloc(name_length, sizeof(uint16_t));
-  if (NULL == name_wide) {
-    return NULL;
-  }
-  fread(name_wide, sizeof(uint16_t), name_length, fd);
-
-  char * name = (char *) calloc(name_length, sizeof(char));
-  if (NULL == name) {
-    free(name_wide);
-    return NULL;
-  }
-
-  size_t len = name_length *  sizeof(uint16_t);
-  size_t utf8_len = name_length * sizeof(char);
-  iconv_t conv = iconv_open("UTF-8", "UTF-16");
-  iconv(conv, &name_wide, &len, &name, &utf8_len);
-  iconv_close(conv);
-  free(name_wide);
-
-  return name;
-}
-
 uint8_t * read_string2(FILE * fd, uint32_t resource_offset, uint32_t string_offset, uint32_t size) {
   uint32_t offset = resource_offset + (string_offset & 0x7FFFFFFF);
 
@@ -254,6 +220,12 @@ void read_directory_entry(FILE * fd, uint32_t resource_offset, uint32_t entry_of
     printf("Invalid data entry found\n");
     exit(15);
   }
+  uint16_t length;
+  fseek(fd, ftell(fd) + (resource_directory_entry.offset_to_data & 0x7FFFFFFF), SEEK_SET);
+  fread(&length, sizeof(uint16_t), 1, fd);
+  printf("Found value: %i or %c\n", length, length);
+  uint8_t * str = read_directory_name(fd, ftell(fd), 0, NULL);
+
   // uint8_t * name = read_string2(fd, resource_offset, resource_directory_entry.offset_to_data, resource_directory_entry.size);
   // printf("String of length %i: %s\n", resource_directory_entry.size, name);
   // free(name);
