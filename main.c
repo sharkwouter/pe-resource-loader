@@ -121,6 +121,10 @@ typedef struct __attribute__((packed)) {
 } ResourceDataEntry;
 
 uint32_t virtual_offset = 0;
+uint32_t section_virtual_address = 0;
+uint32_t section_address = 0;
+uint32_t section_size = 0;
+uint16_t section_alignment = 0;
 
 uint32_t wide_string_length_with_size(uint16_t * str, uint32_t size) {
   size_t full_length = size/sizeof(uint16_t);
@@ -209,7 +213,7 @@ void read_string(FILE * fd, uint32_t resource_offset, uint32_t data_offset, uint
   free(string_readable);
 }
 
-void read_directory_entry(FILE * fd, uint32_t resource_offset, uint32_t entry_offset) {
+void read_directory_entry(FILE * fd, uint32_t resource_offset, uint32_t entry_offset, uint32_t current_offset) {
   uint32_t offset = resource_offset + (entry_offset & 0x7FFFFFFF);
 
   ResourceDataEntry resource_directory_entry;
@@ -220,15 +224,31 @@ void read_directory_entry(FILE * fd, uint32_t resource_offset, uint32_t entry_of
     printf("Invalid data entry found\n");
     exit(15);
   }
-  uint16_t length;
-  fseek(fd, ftell(fd) + (resource_directory_entry.offset_to_data & 0x7FFFFFFF), SEEK_SET);
-  fread(&length, sizeof(uint16_t), 1, fd);
-  printf("Found value: %i or %c\n", length, length);
-  uint8_t * str = read_directory_name(fd, ftell(fd), 0, NULL);
+  uint8_t * data = (uint8_t *) calloc(1, resource_directory_entry.size);
+  uint16_t first_value;
+  uint32_t file_offset = (resource_directory_entry.offset_to_data & 0x7FFFFFFF) - ((section_virtual_address + (section_alignment-1)) &~ (section_alignment-1)) + ((section_address + (section_alignment-1)) &~ (section_alignment-1)) ;
+  //file_offset = (file_offset + (section_alignment-1)) &~ (section_alignment-1);
+  printf("File offset = %i\n", file_offset);
+  fseek(fd, file_offset, SEEK_SET);
+  fread(data, resource_directory_entry.size, 1, fd);
+  // fread(&first_value, sizeof(uint16_t), 1, fd);
+  // printf("Values found: %i\n", first_value);
+  // fread(data, sizeof(uint16_t), resource_directory_entry.size / sizeof(uint16_t), fd);
+  for(int i = 0; i < resource_directory_entry.size; i++) {
+    if (data[i] == '\0' && i != resource_directory_entry.size - 4 && data[i + 1] == '\0') {
+      printf("\n%i: ", data[i + 3]);
+    }
+    if (data[i] && data[i] >= 32 && data[i] <=127) {
+      printf("%c", data[i]);
+    }
+  }
+  printf("\n");
 
-  // uint8_t * name = read_string2(fd, resource_offset, resource_directory_entry.offset_to_data, resource_directory_entry.size);
-  // printf("String of length %i: %s\n", resource_directory_entry.size, name);
-  // free(name);
+  // uint8_t * str = wide_string_to_utf8((uint16_t *) data, resource_directory_entry.size / sizeof(uint16_t));
+
+  // uint8_t * name = read_string2(fd, resource_offset, resource_directory_entry.offset_to_data, resource_directory_entry.size / sizeof(uint16_t));
+  // printf("String of length %i: %s\n", resource_directory_entry.size / sizeof(uint16_t), str);
+  // free(str);
 }
 
 // void read_data_entry(FILE * fd, uint32_t resource_offset, uint32_t directory_offset) {
@@ -276,7 +296,7 @@ void read_language_directory(FILE * fd, uint32_t resource_offset, uint32_t direc
         printf("String is in language with id: %i\n", directory_entries[i].name_offset_or_id);
       }
       printf("Offset found: %i, resource_offset=%i, directory_offset=%i\n", directory_entries[i].data_or_subdirectory_offset, resource_offset, (directory_offset & 0x7FFFFFFF));
-      read_directory_entry(fd, resource_offset, directory_entries[i].data_or_subdirectory_offset);
+      read_directory_entry(fd, resource_offset, directory_entries[i].data_or_subdirectory_offset, offset);
     } else {
       printf("Error: expected pointer to data in language entry\n");
       exit(15);
@@ -443,7 +463,6 @@ int main(int argc, char ** argv) {
   fread(file_header, sizeof(FileHeader), 1, fd);
 
   DataDirectory * data_directories = NULL;
-  uint16_t section_alignment = 0;
   uint16_t file_alignment = 0;
   uint32_t number_of_data_directories = 0;
   switch (file_header->machine) {
@@ -456,6 +475,7 @@ int main(int argc, char ** argv) {
         //printf("NT Magic: %s\n", optional_header.magic);
         section_alignment = optional_header.section_alignment;
         number_of_data_directories = optional_header.number_of_data_directories;
+        printf("Section alignment and file alignment: %i, %i\n", section_alignment, optional_header.file_alignment);
 
         // Get the data directory list to get the resource directory location
         data_directories = (DataDirectory *) calloc(optional_header.number_of_data_directories, sizeof(DataDirectory));
@@ -501,6 +521,8 @@ int main(int argc, char ** argv) {
       printf("Address: real=%i, virtual=%i\n", section_headers[i].address, section_headers[i].virtual_address);
       virtual_offset = section_headers[i].virtual_address - section_headers[i].address;
       printf("Virtual offset is %i\n", virtual_offset);
+      section_virtual_address = section_headers[i].virtual_address;
+      section_address = section_headers[i].address;
     }
   }
 
