@@ -230,13 +230,20 @@ void read_data_entry(FILE * fd, uint32_t resource_offset, uint32_t entry_offset,
 
   fseek(fd, file_offset, SEEK_SET);
   fread(data, sizeof(uint16_t), data_length, fd);
+  // for(int i = 0; i < data_length; i++) {
+  //   printf("%04x ", data[i]);
+  // }
+  // printf("\n");
+
   int found_start = 0;
   for(int i = 0; i < data_length; i++) {
-    if (!data[i]) {
-      printf(" ");
-    } else if (data[i] >= 32 && data[i] <=127) {
-      printf("%c", (uint8_t) data[i]);
-    }
+      if (data[i]) {
+        for(int j = 0; j < data[i]; j++) {
+          printf("%c", (uint8_t) data[i + 1 + j]);
+        }
+        printf("\n");
+        i += data[i];
+      }
   }
   printf("\n");
 }
