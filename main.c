@@ -213,7 +213,7 @@ void read_string(FILE * fd, uint32_t resource_offset, uint32_t data_offset, uint
   free(string_readable);
 }
 
-void read_data_entry(FILE * fd, uint32_t resource_offset, uint32_t entry_offset, uint32_t current_offset) {
+void read_data_entry(FILE * fd, uint32_t resource_offset, uint32_t entry_offset, uint32_t id) {
   uint32_t offset = resource_offset + (entry_offset & 0x7FFFFFFF);
 
   ResourceDataEntry resource_directory_entry;
@@ -230,25 +230,22 @@ void read_data_entry(FILE * fd, uint32_t resource_offset, uint32_t entry_offset,
 
   fseek(fd, file_offset, SEEK_SET);
   fread(data, sizeof(uint16_t), data_length, fd);
-  // for(int i = 0; i < data_length; i++) {
-  //   printf("%04x ", data[i]);
-  // }
-  // printf("\n");
-
-  int found_start = 0;
+  id = (id - 1) * 16;
   for(int i = 0; i < data_length; i++) {
       if (data[i]) {
+        printf("%i: ", id);
         for(int j = 0; j < data[i]; j++) {
           printf("%c", (uint8_t) data[i + 1 + j]);
         }
         printf("\n");
         i += data[i];
       }
+      id += 1;
   }
   printf("\n");
 }
 
-void read_language_directory(FILE * fd, uint32_t resource_offset, uint32_t directory_offset) {
+void read_language_directory(FILE * fd, uint32_t resource_offset, uint32_t directory_offset, uint32_t id) {
   uint32_t offset = resource_offset + (directory_offset & 0x7FFFFFFF);
 
   ResourceDirectoryTable resource_directory_table;
@@ -267,7 +264,7 @@ void read_language_directory(FILE * fd, uint32_t resource_offset, uint32_t direc
       } else {
         printf("String is in language with id: %i\n", directory_entries[i].name_offset_or_id);
       }
-      read_data_entry(fd, resource_offset, directory_entries[i].data_or_subdirectory_offset, offset);
+      read_data_entry(fd, resource_offset, directory_entries[i].data_or_subdirectory_offset, id);
     } else {
       printf("Error: expected pointer to data in language entry\n");
       exit(15);
@@ -297,7 +294,7 @@ void read_string_directory(FILE * fd, uint32_t resource_offset, uint32_t directo
         printf("Name entry found for some reason\n");
       } else {
         printf("Found type id: %i\n", directory_entries[i].name_offset_or_id);
-        read_language_directory(fd, resource_offset, directory_entries[i].data_or_subdirectory_offset);
+        read_language_directory(fd, resource_offset, directory_entries[i].data_or_subdirectory_offset, directory_entries[i].name_offset_or_id & 0x7FFFFFFF);
       }
     }
   }
