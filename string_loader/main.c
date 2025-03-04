@@ -4,6 +4,7 @@
 #include <string.h>
 #include <assert.h>
 
+#include <pe_resource_loader.h>
 
 // These are used in open
 #define MZ 0x5A4D
@@ -122,12 +123,6 @@ typedef struct __attribute__((packed)) {
   uint32_t  code_page;
   uint32_t  reserved;
 } ResourceDataEntry;
-
-typedef struct {
-  FILE *  fd;
-  uint32_t resource_virtual_address;
-  uint32_t resource_offset;
-} PeResourceLoader;
 
 uint32_t section_virtual_address = 0;
 uint32_t section_address = 0;
@@ -360,112 +355,6 @@ void read_type_directory(FILE * fd, uint32_t resource_offset, uint32_t directory
   }
 }
 
-void validate_library() {
-  // If any of these fail, you'll need to rewrite the way this library reads data to get it to work
-  assert(sizeof(DosHeader) == 64);
-  assert(sizeof(FileHeader) == 20);
-  assert(sizeof(OptionalHeader) == 96);
-  assert(sizeof(OptionalHeader64) == 112);
-  assert(sizeof(DataDirectory) == 8);
-  assert(sizeof(SectionHeader) == 40);
-  assert(sizeof(ResourceDirectoryTable) == 16);
-  assert(sizeof(ResourceDirectoryEntry) == 8);
-}
-
-#define MZ 0x5A4D
-
-#define AMD64 0x8664
-#define i386 0x14c
-PeResourceLoader * PeResourceLoader_Open(const char * file_path) {
-  validate_library();  // if this fails, we cannot map the content of PE file to our structs
-
-  PeResourceLoader * loader = (PeResourceLoader *) calloc(sizeof(PeResourceLoader), 1);
-  loader->fd = fopen(file_path, "rb");
-  if (loader->fd == NULL) {
-    return NULL;
-  }
-
-  
-  {
-    // Get DOS header and verify it is a DOS header
-    DosHeader dos_header;
-    fread(&dos_header, sizeof(DosHeader), 1, loader->fd);
-    if (strncmp(dos_header.magic, "MZ", 2) != 0) {
-      fclose(loader->fd);
-      free(loader);
-      return NULL;
-    }
-
-    // Verify NT signature
-    uint8_t nt_signature[4];
-    fseek(loader->fd, dos_header.nt_header_offset, SEEK_SET);
-    fread(nt_signature, sizeof(uint8_t), sizeof(nt_signature), loader->fd);
-    if(strcmp(nt_signature, "PE") != 0) {
-      fclose(loader->fd);
-      free(loader);
-      return NULL;
-    }
-  }
-
-  {
-    // Get file header and verify machine type is a supported type
-    FileHeader file_header;
-    fread(&file_header, sizeof(FileHeader), 1, loader->fd);
-    switch (file_header.machine) {
-      case i386:
-        {
-          // Get the number of data directories
-          OptionalHeader optional_header;
-          fread(&optional_header, sizeof(OptionalHeader), 1, loader->fd);
-          if (optional_header.magic != PE32) {
-            fclose(loader->fd);
-            free(loader);
-            return NULL;
-          }
-          // Move cursor to the section header
-          fseek(loader->fd, sizeof(DataDirectory) * optional_header.number_of_data_directories, SEEK_CUR);
-        }
-        break;
-      case AMD64:
-        {
-          // Get the number of data directories
-          OptionalHeader64 optional_header;
-          fread(&optional_header, sizeof(OptionalHeader64), 1, loader->fd);
-          if (optional_header.magic != PE32PLUS) {
-            fclose(loader->fd);
-            free(loader);
-            return NULL;
-          }
-          // Move cursor to the section header
-          fseek(loader->fd, sizeof(DataDirectory) * optional_header.number_of_data_directories, SEEK_CUR);
-        }
-        break;
-      default:
-        fclose(loader->fd);
-        free(loader);
-        return NULL;
-    }
-
-    // Read the section headers
-    SectionHeader * section_headers = (SectionHeader *) calloc(file_header.number_of_sections, sizeof(SectionHeader));
-    fread(section_headers, sizeof(SectionHeader), file_header.number_of_sections, loader->fd);
-    for(int i = 0; i < file_header.number_of_sections; i++) {
-      if (strcmp(".rsrc", section_headers[i].name) == 0) {
-        loader->resource_offset = section_headers[i].address;
-        loader->resource_virtual_address = section_headers[i].virtual_address;
-        break;
-      }
-    }
-    if (loader->resource_offset == 0 || loader->resource_virtual_address == 0) {
-      fclose(loader->fd);
-      free(loader);
-      return NULL;
-    }
-  }
-
-  return loader;
-}
-
 int main(int argc, char ** argv) {
   if (argc != 2) {
     printf("No file was defined\n");
@@ -478,8 +367,8 @@ int main(int argc, char ** argv) {
   section_virtual_address = loader->resource_virtual_address;
 
   read_type_directory(loader->fd, loader->resource_offset, 0);
-  fclose(loader->fd);
-  free(loader);
+
+  PeResourceLoader_Close(loader);
 
   return 0; 
 }
