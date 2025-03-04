@@ -206,7 +206,6 @@ void read_data_entry(FILE * fd, uint32_t resource_offset, uint32_t entry_offset,
       }
       id += 1;
   }
-  printf("\n");
 }
 
 void read_language_directory(FILE * fd, uint32_t resource_offset, uint32_t directory_offset, uint32_t id) {
@@ -224,9 +223,9 @@ void read_language_directory(FILE * fd, uint32_t resource_offset, uint32_t direc
 
     if (is_data) {
       if (directory_entries[i].name_offset_or_id == LANGUAGE_ENGLISH_US) {
-        printf("String is in American English\n");
+        // printf("String is in American English\n");
       } else {
-        printf("String is in language with id: %i\n", directory_entries[i].name_offset_or_id);
+        // printf("String is in language with id: %i\n", directory_entries[i].name_offset_or_id);
       }
       read_data_entry(fd, resource_offset, directory_entries[i].data_or_subdirectory_offset, id);
     } else {
@@ -257,7 +256,7 @@ void read_string_directory(FILE * fd, uint32_t resource_offset, uint32_t directo
       if (is_named) {
         printf("Name entry found for some reason\n");
       } else {
-        printf("Found type id: %i\n", directory_entries[i].name_offset_or_id);
+        // printf("Found type id: %i\n", directory_entries[i].name_offset_or_id);
         read_language_directory(fd, resource_offset, directory_entries[i].data_or_subdirectory_offset, directory_entries[i].name_offset_or_id & 0x7FFFFFFF);
       }
     }
@@ -284,70 +283,70 @@ void read_type_directory(FILE * fd, uint32_t resource_offset, uint32_t directory
     } else {
       if (is_named) {
         uint8_t * name = read_directory_name(fd, resource_offset, directory_entries[i].name_offset_or_id, NULL);
-        printf("Found data with name: %s\n", name);
+        // printf("Found data with name: %s\n", name);
         free(name);
       } else {
         switch (directory_entries[i].name_offset_or_id) {
           case RT_CURSOR:
-            printf("Found cursor table\n");
+            // printf("Found cursor table\n");
             break;
           case RT_BITMAP:
-            printf("Found bitmap table\n");
+            // printf("Found bitmap table\n");
             break;
           case RT_ICON:
-            printf("Found icon table\n");
+            // printf("Found icon table\n");
             break;
           case RT_MENU:
-            printf("Found menu table\n");
+            // printf("Found menu table\n");
             break;
           case RT_DIALOG:
-            printf("Found dialog table\n");
+            // printf("Found dialog table\n");
             break;
           case RT_STRING:
-            printf("Found string table\n");
+            // printf("Found string table\n");
             read_string_directory(fd, resource_offset, directory_entries[i].data_or_subdirectory_offset);
             break;
           case RT_FONTDIR:
-            printf("Found font table\n");
+            // printf("Found font table\n");
             break;
           case RT_FONT:
-            printf("Found font\n");
+            // printf("Found font\n");
             break;
           case RT_ACCELERATOR:
-            printf("Found accelerator table\n");
+            // printf("Found accelerator table\n");
             break;
           case RT_RCDATA:
-            printf("Found rcdata table\n");
+            // printf("Found rcdata table\n");
             break;
           case RT_MESSAGETABLE:
-            printf("Found message table\n");
+            // printf("Found message table\n");
             break;
           case RT_VERSION:
-            printf("Found version table\n");
+            // printf("Found version table\n");
             break;
           case RT_DLGINCLUDE:
-            printf("Found dlginclude table\n");
+            // printf("Found dlginclude table\n");
             break;
           case RT_PLUGPLAY:
-            printf("Found plugplay table\n");
+            // printf("Found plugplay table\n");
             break;
           case RT_VXD:
-            printf("Found vxd table\n");
+            // printf("Found vxd table\n");
             break;
           case RT_ANICURSOR:
-            printf("Found anicursor table\n");
+            // printf("Found anicursor table\n");
             break;
           case RT_ANIICON:
-            printf("Found aniicon table\n");
+            // printf("Found aniicon table\n");
             break;
           case RT_HTML:
-            printf("Found html table\n");
+            // printf("Found html table\n");
             break;
           case RT_MANIFEST:
-            printf("Found manifest table\n");
+            // printf("Found manifest table\n");
             break;
           default:
-            printf("Found unsupported table %i\n", directory_entries[i].name_offset_or_id);
+            // printf("Found unsupported table %i\n", directory_entries[i].name_offset_or_id);
             break;
         }
       }
