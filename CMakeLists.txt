@@ -7,20 +7,20 @@ target_include_directories(pe_resource_loader PRIVATE
   include/
 )
 
-option(BUILD_STRING_LOADER_PROGRAM "If the string loader program should be build as well" ON)
-if(BUILD_STRING_LOADER_PROGRAM)
+option(PE_STRING_LOADER "If the pe_string_loader program should be build as well" ON)
+if(PE_STRING_LOADER)
   add_executable(pe_string_loader pe_string_loader/main.c)
   target_include_directories(pe_string_loader PRIVATE
     include/
   )
   target_link_libraries(pe_string_loader pe_resource_loader)
-endif(BUILD_STRING_LOADER_PROGRAM)
+endif(PE_STRING_LOADER)
 
 if (NOT WIN32)
   install(TARGETS pe_resource_loader DESTINATION lib)
   install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/pe_resource_loader.h DESTINATION include/)
   install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt DESTINATION share/licenses/pe_resource_loader/)
-  if(BUILD_STRING_LOADER_PROGRAM)
+  if(PE_STRING_LOADER)
     install(TARGETS pe_string_loader DESTINATION bin)
-  endif(BUILD_STRING_LOADER_PROGRAM)
+  endif(PE_STRING_LOADER)
 endif(NOT WIN32)
