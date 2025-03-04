@@ -361,6 +361,10 @@ int main(int argc, char ** argv) {
   }
 
   PeResourceLoader  * loader = PeResourceLoader_Open(argv[1]);
+  if (!loader) {
+    printf("File %s does not exist or is not a valid PE file\n", argv[1]);
+    return 2;
+  }
 
   section_address = loader->resource_offset;
   section_virtual_address = loader->resource_virtual_address;
