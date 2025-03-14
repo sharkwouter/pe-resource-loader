@@ -184,3 +184,116 @@ PeResourceLoader * PeResourceLoader_Close(PeResourceLoader * loader) {
   free(loader);
   loader = NULL;
 }
+
+ResourceDirectoryEntry * PeResourceLoader_GetDirectoryIdEntries(PeResourceLoader * loader, uint32_t offset, uint16_t * entry_count) {
+  offset = loader->resource_offset + offset;
+
+  ResourceDirectoryTable resource_directory_table;
+  fseek(loader->fd, offset, SEEK_SET);
+  fread(&resource_directory_table, sizeof(ResourceDirectoryTable), 1, loader->fd);
+  *entry_count = resource_directory_table.number_of_id_entries;
+  // printf("Found %i entries\n", *entry_count);
+
+  // Skip named entries
+  fseek(loader->fd, sizeof(ResourceDirectoryEntry) * resource_directory_table.number_of_name_entries, SEEK_CUR);
+  ResourceDirectoryEntry * directory_entries = (ResourceDirectoryEntry *) calloc(resource_directory_table.number_of_id_entries, sizeof(ResourceDirectoryEntry));
+  fread(directory_entries, sizeof(ResourceDirectoryEntry), resource_directory_table.number_of_id_entries, loader->fd);
+  return directory_entries;
+}
+
+ResourceDirectoryEntry * PeResourceLoader_GetDirectoryEntryById(PeResourceLoader * loader, uint32_t offset, uint32_t id) {
+    uint16_t entry_count = 0;
+    ResourceDirectoryEntry * entries = PeResourceLoader_GetDirectoryIdEntries(loader, offset, &entry_count);
+    for (uint16_t i = 0; i < entry_count; i++) {
+      if (entries[i].name_offset_or_id == id) {
+        ResourceDirectoryEntry * entry = (ResourceDirectoryEntry *) calloc(1, sizeof(ResourceDirectoryEntry));
+        memcpy(entry, &entries[i], sizeof(ResourceDirectoryEntry));
+        free(entries);
+        return entry;
+      } 
+    }
+
+    free(entries);
+    return NULL;
+}
+
+#define RT_CURSOR 1
+#define RT_BITMAP 2
+#define RT_ICON 3
+#define RT_MENU 4
+#define RT_DIALOG 5
+#define RT_STRING 6
+#define RT_FONTDIR 7
+#define RT_FONT 8
+#define RT_ACCELERATOR 9
+#define RT_RCDATA 10
+#define RT_MESSAGETABLE 11
+#define RT_VERSION 16
+#define RT_DLGINCLUDE 17
+#define RT_PLUGPLAY 19
+#define RT_VXD 20
+#define RT_ANICURSOR 21
+#define RT_ANIICON 22
+#define RT_HTML 23
+#define RT_MANIFEST 24
+
+#define MAX_LANG_COUNT 1024
+
+uint32_t * PeResourceLoader_GetLanguageIds(PeResourceLoader * loader, uint16_t * language_count) {
+  *language_count = 0;
+  ResourceDirectoryEntry * rt_string_entry = PeResourceLoader_GetDirectoryEntryById(loader, 0, RT_STRING);
+  if (rt_string_entry == NULL) {
+    return NULL;
+  }
+  uint32_t * languages = (uint32_t *) calloc(MAX_LANG_COUNT, sizeof(uint32_t));
+
+  uint16_t string_directory_count = 0;
+  ResourceDirectoryEntry * string_directories = PeResourceLoader_GetDirectoryIdEntries(loader, rt_string_entry->data_or_subdirectory_offset & 0x7FFFFFFF, &string_directory_count);
+  free(rt_string_entry);
+  for (uint16_t string_directory_index = 0; string_directory_index < string_directory_count; string_directory_index++) {
+    uint16_t language_directory_count = 0;
+    ResourceDirectoryEntry * language_directories = PeResourceLoader_GetDirectoryIdEntries(loader, string_directories[string_directory_index].data_or_subdirectory_offset  & 0x7FFFFFFF, &language_directory_count);
+    for (uint16_t language_directory_index = 0; language_directory_index < language_directory_count; language_directory_index++) {
+      uint8_t language_found = 0;
+      for(uint16_t language_index = 0; language_index < *language_count; language_index++) {
+        if (language_directories[language_directory_index].name_offset_or_id == languages[language_index]) {
+          language_found = 1;
+          break;
+        }
+      }
+      if (!language_found) {
+        languages[*language_count] = language_directories[language_directory_index].name_offset_or_id;
+        *language_count = *language_count + 1;
+      }
+    }
+    free(language_directories);
+  }
+  free(string_directories);
+
+  return languages;
+}
+
+uint8_t * PeResourceLoader_GetString(PeResourceLoader * loader, uint16_t language_id, uint32_t string_id, uint16_t * length) {
+  uint8_t string = NULL;
+  *length = 0;
+
+  ResourceDirectoryEntry * rt_string_entry = PeResourceLoader_GetDirectoryEntryById(loader, 0, RT_STRING);
+  if (rt_string_entry == NULL) {
+    return NULL;
+  }
+
+  uint16_t string_directory_count = 0;
+  ResourceDirectoryEntry * string_directories = PeResourceLoader_GetDirectoryIdEntries(loader, rt_string_entry->data_or_subdirectory_offset & 0x7FFFFFFF, &string_directory_count);
+  free(rt_string_entry);
+  for (uint16_t string_directory_index = 0; string_directory_index < string_directory_count; string_directory_index++) {
+    uint16_t language_directory_count = 0;
+    ResourceDirectoryEntry * language_directories = PeResourceLoader_GetDirectoryIdEntries(loader, string_directories[string_directory_index].data_or_subdirectory_offset  & 0x7FFFFFFF, &language_directory_count);
+    for (uint16_t language_directory_index = 0; language_directory_index < language_directory_count; language_directory_index++) {
+      uint8_t string_count = 0;
+    }
+    free(language_directories);
+  }
+  free(string_directories);
+
+  return string;
+}

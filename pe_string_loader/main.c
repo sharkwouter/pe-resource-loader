@@ -365,6 +365,13 @@ int main(int argc, char ** argv) {
     printf("File %s does not exist or is not a valid PE file\n", argv[1]);
     return 2;
   }
+  // uint16_t language_count = 0;
+  // uint32_t * languages = PeResourceLoader_GetLanguageIds(loader, &language_count);
+  // for (uint16_t i = 0; i < language_count; i++) {
+  //   printf("Found language with id %u\n", languages[i]);
+  // }
+  // free(languages);
+  // return 0;
 
   section_address = loader->resource_offset;
   section_virtual_address = loader->resource_virtual_address;
