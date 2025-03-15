@@ -273,6 +273,41 @@ uint32_t * PeResourceLoader_GetLanguageIds(PeResourceLoader * loader, uint16_t *
   return languages;
 }
 
+uint32_t *PeResourceLoader_GetStringIds(PeResourceLoader *loader, uint16_t *string_count)
+{
+  *language_count = 0;
+  ResourceDirectoryEntry * rt_string_entry = PeResourceLoader_GetDirectoryEntryById(loader, 0, RT_STRING);
+  if (rt_string_entry == NULL) {
+    return NULL;
+  }
+  uint32_t * languages = (uint32_t *) calloc(MAX_LANG_COUNT, sizeof(uint32_t));
+
+  uint16_t string_directory_count = 0;
+  ResourceDirectoryEntry * string_directories = PeResourceLoader_GetDirectoryIdEntries(loader, rt_string_entry->data_or_subdirectory_offset & 0x7FFFFFFF, &string_directory_count);
+  free(rt_string_entry);
+  for (uint16_t string_directory_index = 0; string_directory_index < string_directory_count; string_directory_index++) {
+    uint16_t language_directory_count = 0;
+    ResourceDirectoryEntry * language_directories = PeResourceLoader_GetDirectoryIdEntries(loader, string_directories[string_directory_index].data_or_subdirectory_offset  & 0x7FFFFFFF, &language_directory_count);
+    for (uint16_t language_directory_index = 0; language_directory_index < language_directory_count; language_directory_index++) {
+      uint8_t language_found = 0;
+      for(uint16_t language_index = 0; language_index < *language_count; language_index++) {
+        if (language_directories[language_directory_index].name_offset_or_id == languages[language_index]) {
+          language_found = 1;
+          break;
+        }
+      }
+      if (!language_found) {
+        languages[*language_count] = language_directories[language_directory_index].name_offset_or_id;
+        *language_count = *language_count + 1;
+      }
+    }
+    free(language_directories);
+  }
+  free(string_directories);
+
+  return languages;
+}
+
 uint8_t * PeResourceLoader_GetString(PeResourceLoader * loader, uint16_t language_id, uint32_t string_id, uint16_t * length) {
   uint8_t * string = NULL;
   if (length != NULL) {
@@ -290,6 +325,7 @@ uint8_t * PeResourceLoader_GetString(PeResourceLoader * loader, uint16_t languag
 
   ResourceDirectoryEntry * rt_language_entry = NULL;
   for (uint16_t string_directory_index = 0; string_directory_index < string_directory_count; string_directory_index++) {
+    // The string directory id - 1 * 16 is the id of the first entry in the resource data entries in it, because each one contains 16 strings in each language in it
     if (string_directories[string_directory_index].name_offset_or_id == string_id / 16 + 1) {
       rt_language_entry = PeResourceLoader_GetDirectoryEntryById(loader, string_directories[string_directory_index].data_or_subdirectory_offset & 0x7FFFFFFF, language_id);
       break;
@@ -301,16 +337,21 @@ uint8_t * PeResourceLoader_GetString(PeResourceLoader * loader, uint16_t languag
     return NULL;
   }
 
+  // Make sure the language entry contains data. This is not really required, but might be good to have
   uint8_t is_data = ((rt_language_entry->data_or_subdirectory_offset & 0x80000000) == 0);
   if (!is_data) {
     printf("Something is broken, this string should be data!\n");
     return NULL;
   }
+
+  // Need to read a resource data entry
   ResourceDataEntry string_data_entry;
   fseek(loader->fd, loader->resource_offset + (rt_language_entry->data_or_subdirectory_offset & 0x7FFFFFFF), SEEK_SET);
   fread(&string_data_entry, sizeof(ResourceDataEntry), 1, loader->fd);
   free(rt_language_entry);
 
+  // The string data directory format is kinda weird
+  // It is in utf-16 and one entry contains 16 strings, of which any number can be empty
   uint32_t data_offset = string_data_entry.offset_to_data - loader->resource_virtual_address  + loader->resource_offset;
   uint32_t data_length = string_data_entry.size / sizeof(uint16_t);
   uint16_t * data = (uint16_t *) calloc(1, string_data_entry.size);
