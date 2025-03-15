@@ -256,7 +256,7 @@ void read_string_directory(FILE * fd, uint32_t resource_offset, uint32_t directo
       if (is_named) {
         printf("Name entry found for some reason\n");
       } else {
-        // printf("Found type id: %i\n", directory_entries[i].name_offset_or_id);
+        printf("Found type id: %i\n", directory_entries[i].name_offset_or_id);
         read_language_directory(fd, resource_offset, directory_entries[i].data_or_subdirectory_offset, directory_entries[i].name_offset_or_id & 0x7FFFFFFF);
       }
     }
@@ -372,11 +372,14 @@ int main(int argc, char ** argv) {
   // }
   // free(languages);
   // return 0;
+  uint16_t length = 0;
+  uint8_t * stgring = PeResourceLoader_GetString(loader, 1033, 107, &length);
+  printf("%s\n", stgring);
 
-  section_address = loader->resource_offset;
-  section_virtual_address = loader->resource_virtual_address;
+  // section_address = loader->resource_offset;
+  // section_virtual_address = loader->resource_virtual_address;
 
-  read_type_directory(loader->fd, loader->resource_offset, 0);
+  // read_type_directory(loader->fd, loader->resource_offset, 0);
 
   PeResourceLoader_Close(loader);
 

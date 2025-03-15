@@ -32,3 +32,4 @@ typedef enum {
 PeResourceLoader * PeResourceLoader_Open(const char * file_path);
 PeResourceLoader * PeResourceLoader_Close(PeResourceLoader * loader);
 uint32_t * PeResourceLoader_GetLanguageIds(PeResourceLoader * loader, uint16_t * language_count);
+uint8_t * PeResourceLoader_GetString(PeResourceLoader * loader, uint16_t language_id, uint32_t string_id, uint16_t * length);
