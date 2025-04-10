@@ -19,7 +19,7 @@
 #define SHORT_NAME_SIZE 8
 
 typedef struct __attribute__((packed)) {
-  uint8_t  magic[2];
+  uint8_t   magic[2];
   uint8_t   unused[58];
   int32_t   nt_header_offset;
 } DosHeader;
@@ -54,7 +54,7 @@ typedef struct __attribute__((packed)) {
 } DataDirectory;
 
 typedef struct __attribute__((packed)) {
-  uint8_t  name[SHORT_NAME_SIZE];
+  uint8_t   name[SHORT_NAME_SIZE];
   uint32_t  virtual_size;
   uint32_t  virtual_address;
   uint32_t  size;
