@@ -71,4 +71,4 @@ sudo make install
 
 No dependencies are needed other than a C compiler. This code will only work on little endian systems for now.
 
-Building without building the `pe_string_loader` program can be done by running the cmake command the `-DPE_STRING_LOADER=OFF`.
+Building without building the `pe_string_loader` program can be done by running the cmake command with `-DPE_STRING_LOADER=OFF`.
