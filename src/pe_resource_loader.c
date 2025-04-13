@@ -300,12 +300,7 @@ uint16_t PeResourceLoader_GetStringCount(PeResourceLoader *loader)
   return last_directory_id * 16;
 }
 
-uint8_t * PeResourceLoader_GetString(PeResourceLoader * loader, uint16_t language_id, uint32_t string_id, uint16_t * length) {
-  uint8_t * string = NULL;
-  if (length != NULL) {
-    *length = 0;
-  }
-
+ResourceDataEntry * PeResourceLoader_GetStringDataEntry(PeResourceLoader * loader, uint16_t language_id, uint32_t string_id) {
   uint16_t string_directory_count = 0;
   ResourceDirectoryEntry * string_directories = PeResourceLoader_GetStringDirectories(loader, &string_directory_count);
 
@@ -323,39 +318,84 @@ uint8_t * PeResourceLoader_GetString(PeResourceLoader * loader, uint16_t languag
     return NULL;
   }
 
-  // Make sure the language entry contains data. This is not really required, but might be good to have
-  uint8_t is_data = ((rt_language_entry->data_or_subdirectory_offset & 0x80000000) == 0);
-  if (!is_data) {
-    printf("Something is broken, this string should be data!\n");
+  // Need to read a resource data entry
+  ResourceDataEntry * string_data_entry = calloc(sizeof(ResourceDataEntry), 1);
+  fseek(loader->fd, loader->resource_offset + (rt_language_entry->data_or_subdirectory_offset & 0x7FFFFFFF), SEEK_SET);
+  fread(string_data_entry, sizeof(ResourceDataEntry), 1, loader->fd);
+  free(rt_language_entry);
+
+  return string_data_entry;
+}
+
+uint8_t * PeResourceLoader_GetDataEntryData(PeResourceLoader * loader, ResourceDataEntry * data_entry) {
+  if (!data_entry) {
     return NULL;
   }
 
-  // Need to read a resource data entry
-  ResourceDataEntry string_data_entry;
-  fseek(loader->fd, loader->resource_offset + (rt_language_entry->data_or_subdirectory_offset & 0x7FFFFFFF), SEEK_SET);
-  fread(&string_data_entry, sizeof(ResourceDataEntry), 1, loader->fd);
-  free(rt_language_entry);
+  uint8_t * data = (uint8_t *) calloc(1, data_entry->size);
+  uint32_t data_offset = data_entry->offset_to_data - loader->resource_virtual_address  + loader->resource_offset;
 
-  // The string data directory format is kinda weird
-  // It is in utf-16 and one entry contains 16 strings, of which any number can be empty
-  uint32_t data_offset = string_data_entry.offset_to_data - loader->resource_virtual_address  + loader->resource_offset;
-  uint32_t data_length = string_data_entry.size / sizeof(uint16_t);
-  uint16_t * data = (uint16_t *) calloc(1, string_data_entry.size);
   fseek(loader->fd, data_offset, SEEK_SET);
-  fread(data, sizeof(uint16_t), data_length, loader->fd);
-  uint16_t id = string_id / 16 * 16;
-  for(int i = 0; i < data_length; i++) {
+  fread(data, 1, data_entry->size, loader->fd);
+
+  return data;
+}
+
+uint16_t * PeResourceLoader_GetStringDataEntryData(PeResourceLoader * loader, ResourceDataEntry * data_entry) {
+  // Strings are utf 16, which means it is really hard to work with when it is saved in uint8_t
+  uint8_t * raw_data = PeResourceLoader_GetDataEntryData(loader, data_entry);
+  uint16_t * return_data = calloc(1, data_entry->size);
+  memcpy(return_data, raw_data, data_entry->size);
+  free(raw_data);
+
+  return return_data;
+}
+
+uint8_t * PeResourceLoader_Utf16ToUtf8(uint16_t * string_data, uint16_t * length) {
+  // This code basically pretends we're using ASCII and skips everything else
+
+  uint8_t * output_string = (uint8_t *) calloc(*length, sizeof(uint8_t));
+  for (uint16_t i = 0; i < *length; i++) {
+    if (string_data[i] >= 0xD800) {
+      // Code does not deal with surrogate pairs at the moment
+      continue;
+    } else if (string_data[i] > 0x7F) {
+      // Don't deal with complex utf-8 strings either for now
+      continue;
+    } else {
+      output_string[i] = (uint8_t) string_data[i];
+    }
+  }
+
+  return output_string;
+}
+
+uint8_t * PeResourceLoader_GetString(PeResourceLoader * loader, uint16_t language_id, uint32_t string_id, uint16_t * length) {
+  if (length != NULL) {
+    *length = 0;
+  }
+
+  ResourceDataEntry * string_data_entry = PeResourceLoader_GetStringDataEntry(loader, language_id, string_id);
+  if (!string_data_entry) {
+    return NULL;
+  }
+
+  uint16_t * data = PeResourceLoader_GetStringDataEntryData(loader, string_data_entry);
+
+  uint16_t id = (string_id & 0xFFFFFFF0);
+  uint16_t size = string_data_entry->size;
+  free(string_data_entry);
+
+  for(int i = 0; i < size; i++) {
       if (data[i]) {
         if (id == string_id) {
           if (length != NULL) {
             *length = data[i];
           }
-          string = (uint8_t *) calloc(data[i], sizeof(uint8_t));
-        }
-        for(int j = 0; j < data[i]; j++) {
-          if (id == string_id) {
-            string[j] = (uint8_t) data[i + 1 + j];
-          }
+          uint8_t * string = PeResourceLoader_Utf16ToUtf8(data + i + 1, &data[i]);
+          free(data);
+
+          return string;
         }
         i += data[i];
       }
@@ -363,6 +403,5 @@ uint8_t * PeResourceLoader_GetString(PeResourceLoader * loader, uint16_t languag
   }
   free(data);
 
-
-  return string;
+  return NULL;
 }
