@@ -216,7 +216,6 @@ ResourceDirectoryEntry * PeResourceLoader_GetDirectoryIdEntries(PeResourceLoader
   fseek(loader->fd, offset, SEEK_SET);
   fread(&resource_directory_table, sizeof(ResourceDirectoryTable), 1, loader->fd);
   *entry_count = resource_directory_table.number_of_id_entries;
-  // printf("Found %i entries\n", *entry_count);
 
   // Skip named entries
   fseek(loader->fd, sizeof(ResourceDirectoryEntry) * resource_directory_table.number_of_name_entries, SEEK_CUR);

@@ -1,3 +1,6 @@
+#ifndef PE_RESOURCE_LOADER_HPP
+#define PE_RESOURCE_LOADER_HPP
+
 #include <stdint.h>
 #include <stdio.h>
 
@@ -7,10 +10,10 @@ typedef struct {
   uint32_t resource_offset;
 } PeResourceLoader;
 
-
-
 PeResourceLoader * PeResourceLoader_Open(const char * file_path);
 PeResourceLoader * PeResourceLoader_Close(PeResourceLoader * loader);
 uint32_t * PeResourceLoader_GetLanguageIds(PeResourceLoader * loader, uint16_t * language_count);
 uint16_t PeResourceLoader_GetStringCount(PeResourceLoader *loader);
 uint8_t * PeResourceLoader_GetString(PeResourceLoader * loader, uint16_t language_id, uint32_t string_id, uint16_t * length);
+
+#endif // PE_RESOURCE_LOADER_HPP
