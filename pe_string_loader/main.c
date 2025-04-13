@@ -365,21 +365,24 @@ int main(int argc, char ** argv) {
     printf("File %s does not exist or is not a valid PE file\n", argv[1]);
     return 2;
   }
-  // uint16_t language_count = 0;
-  // uint32_t * languages = PeResourceLoader_GetLanguageIds(loader, &language_count);
-  // for (uint16_t i = 0; i < language_count; i++) {
-  //   printf("Found language with id %u\n", languages[i]);
-  // }
-  // free(languages);
-  // return 0;
-  uint16_t length = 0;
-  uint8_t * stgring = PeResourceLoader_GetString(loader, 1033, 107, &length);
-  printf("%s\n", stgring);
 
-  // section_address = loader->resource_offset;
-  // section_virtual_address = loader->resource_virtual_address;
+  uint16_t string_count = PeResourceLoader_GetStringCount(loader);
+  printf("String count: %u\n", string_count);
 
-  // read_type_directory(loader->fd, loader->resource_offset, 0);
+  uint16_t language_count = 0;
+  uint32_t * languages = PeResourceLoader_GetLanguageIds(loader, &language_count);
+  for (uint16_t i = 0; i < language_count; i++) {
+    printf("Found language with id: %u\n", languages[i]);
+  }
+  free(languages);
+
+  for (uint16_t i = 0; i < string_count; i++) {
+    uint16_t length = 0;
+    uint8_t * stgring = PeResourceLoader_GetString(loader, 1033, i, &length);
+    if (stgring) {
+      printf("%u: %s\n", i, stgring);
+    }
+  }
 
   PeResourceLoader_Close(loader);
 
