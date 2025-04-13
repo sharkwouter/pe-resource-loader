@@ -382,7 +382,7 @@ uint8_t * PeResourceLoader_GetString(PeResourceLoader * loader, uint16_t languag
 
   uint16_t * data = PeResourceLoader_GetStringDataEntryData(loader, string_data_entry);
 
-  uint16_t id = (string_id & 0xFFFFFFF0);
+  uint16_t id = (string_id & 0xFFFFFFF0);  // The first id in a list of strings rounds to base 16
   uint16_t size = string_data_entry->size;
   free(string_data_entry);
 
