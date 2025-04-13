@@ -6,7 +6,7 @@ Allow you to load resources from Windows exe and dll files even outside of Windo
 
 Here is a basic example of how the PE Resource Loader library can be used in a program to extract a specific string from a DLL file:
 
-```
+```c
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -44,7 +44,7 @@ Make sure to link your code to `pe_resource_loader`. The code for the bundled pe
 
 The bundled `pe_string_loader` program is mostly there to serve as an example of how the PE Resource Loader library can be used, but it does allow getting strings from binaries and DLLs without any additional code. Here is a basic example:
 
-```
+```sh
 ./pe_string_loader my-file.dll
 ```
 
@@ -54,7 +54,7 @@ It will output a list of string for each included language. If the file contains
 
 Building the code can be done simply by running the following commands:
 
-```
+```sh
 git clone https://github.com/sharkwouter/pe-resource-loader.git
 cd pe-resource-loader
 mkdir build
@@ -65,7 +65,7 @@ make
 
 Installing can be done with the following command after running the ones above:
 
-```
+```sh
 sudo make install
 ```
 
