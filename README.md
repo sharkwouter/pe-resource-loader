@@ -1,6 +1,6 @@
 # PE Resource Loader
 
-Allow you to load resources from Windows exe and dll files even outside of Windows. For now it only supports strings.
+Allow you to load resources from Windows exe and dll files even outside of Windows. For now it only supports strings. Conversion of characters from UTF-16 to UTF-8 is still limited to mostly alphanumeric characters at the moment.
 
 ## Using the PE Resource Loader Library
 
