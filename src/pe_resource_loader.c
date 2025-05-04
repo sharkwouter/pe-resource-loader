@@ -451,7 +451,7 @@ uint32_t * PeResourceLoader_GetBitmapIds(PeResourceLoader * loader, uint16_t * b
   return bitmap_ids;
 }
 
-uint8_t *PeResourceLoader_GetBitmap(PeResourceLoader *loader, uint32_t language_id, uint32_t bitmap_id, uint16_t *length) {
+uint8_t *PeResourceLoader_GetBitmap(PeResourceLoader *loader, uint32_t language_id, uint32_t bitmap_id, uint32_t *length) {
   if (length != NULL) {
     *length = 0;
   }
@@ -461,6 +461,8 @@ uint8_t *PeResourceLoader_GetBitmap(PeResourceLoader *loader, uint32_t language_
     return NULL;
   }
 
+  *length = data_entry->size;
+  printf("Size was %u\n", data_entry->size);
   uint8_t * data = PeResourceLoader_GetDataEntryData(loader, data_entry);
   free(data_entry);
   return data;

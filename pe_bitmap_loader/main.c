@@ -36,6 +36,17 @@ int main(int argc, char ** argv) {
     printf("Language with id %u:\n", languages[li]);
     for (uint16_t bi = 0; bi < bitmap_count; bi++) {
       printf("Found bitmap with id %u\n", bitmap_ids[bi]);
+      char * file_name = calloc(sizeof(char), 30);
+      snprintf(file_name, 30, "%u_%u.bmp\0", languages[li], bitmap_ids[bi]);
+      FILE * file = fopen(file_name, "wb");
+      uint32_t file_size;
+      uint8_t * data = PeResourceLoader_GetBitmap(loader, languages[li], bitmap_ids[bi], &file_size);
+      printf("File size is %u\n", file_size);
+      uint8_t bmp_header[] = {0x42, 0x4d, 0x38, 0xf9, 0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x36, 0x00, 0x00, 0x00};
+      fwrite(bmp_header, sizeof(uint8_t), sizeof(bmp_header), file);
+      fwrite(data, sizeof(uint8_t), file_size, file);
+      fclose(file);
+      free(data);
     }
     printf("\n");
   }
