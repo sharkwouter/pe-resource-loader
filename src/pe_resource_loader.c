@@ -461,9 +461,13 @@ uint8_t *PeResourceLoader_GetBitmap(PeResourceLoader *loader, uint32_t language_
     return NULL;
   }
 
-  *length = data_entry->size;
-  printf("Size was %u\n", data_entry->size);
+  uint8_t bmp_header[] = {0x42, 0x4d, 0x38, 0xf9, 0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x36, 0x00, 0x00, 0x00};
+  *length = data_entry->size + (sizeof(bmp_header) * sizeof(uint8_t));
   uint8_t * data = PeResourceLoader_GetDataEntryData(loader, data_entry);
+
+  uint8_t * return_data = calloc(sizeof(uint8_t), sizeof(bmp_header) + data_entry->size);
+  memcpy(return_data, bmp_header, sizeof(bmp_header) * sizeof(uint8_t));
+  memcpy(return_data + (sizeof(bmp_header) * sizeof(uint8_t)), data, data_entry->size);
   free(data_entry);
-  return data;
+  return return_data;
 }

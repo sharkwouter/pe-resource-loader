@@ -42,8 +42,8 @@ int main(int argc, char ** argv) {
       uint32_t file_size;
       uint8_t * data = PeResourceLoader_GetBitmap(loader, languages[li], bitmap_ids[bi], &file_size);
       printf("File size is %u\n", file_size);
-      uint8_t bmp_header[] = {0x42, 0x4d, 0x38, 0xf9, 0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x36, 0x00, 0x00, 0x00};
-      fwrite(bmp_header, sizeof(uint8_t), sizeof(bmp_header), file);
+      // uint8_t bmp_header[] = {0x42, 0x4d, 0x38, 0xf9, 0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x36, 0x00, 0x00, 0x00};
+      // fwrite(bmp_header, sizeof(uint8_t), sizeof(bmp_header), file);
       fwrite(data, sizeof(uint8_t), file_size, file);
       fclose(file);
       free(data);
