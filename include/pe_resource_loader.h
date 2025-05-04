@@ -12,9 +12,15 @@ typedef struct {
 
 PeResourceLoader * PeResourceLoader_Open(const char * file_path);
 PeResourceLoader * PeResourceLoader_Close(PeResourceLoader * loader);
-uint32_t * PeResourceLoader_GetLanguageIds(PeResourceLoader * loader, uint16_t * language_count);
-uint16_t PeResourceLoader_GetStringCount(PeResourceLoader *loader);
-uint8_t * PeResourceLoader_GetString(PeResourceLoader * loader, uint16_t language_id, uint32_t string_id, uint16_t * length);
+
+uint32_t * PeResourceLoader_GetStringLanguageIds(PeResourceLoader * loader, uint16_t * language_count);
+uint32_t * PeResourceLoader_GetStringIds(PeResourceLoader *loader, uint16_t * string_count);
+uint8_t * PeResourceLoader_GetString(PeResourceLoader * loader, uint32_t language_id, uint32_t string_id, uint16_t * length);
+
+uint32_t * PeResourceLoader_GetBitmapLanguageIds(PeResourceLoader * loader, uint16_t * language_count);
+uint32_t * PeResourceLoader_GetBitmapIds(PeResourceLoader * loader, uint16_t * bitmap_count);
+uint8_t * PeResourceLoader_GetBitmap(PeResourceLoader * loader, uint32_t language_id, uint32_t bitmap_id, uint16_t * length);
+
 
 // Possible languages
 typedef enum {

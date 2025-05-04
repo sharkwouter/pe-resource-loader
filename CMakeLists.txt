@@ -16,11 +16,25 @@ if(PE_STRING_LOADER)
   target_link_libraries(pe_string_loader pe_resource_loader)
 endif(PE_STRING_LOADER)
 
+option(PE_BITMAP_LOADER "If the pe_bitmap_loader program should be build as well" ON)
+if(PE_BITMAP_LOADER)
+  add_executable(pe_bitmap_loader pe_bitmap_loader/main.c pe_bitmap_loader/stb_image_write.h)
+  target_include_directories(pe_bitmap_loader PRIVATE
+    include/
+  )
+  target_link_libraries(pe_bitmap_loader pe_resource_loader)
+endif(PE_BITMAP_LOADER)
+
 if (NOT WIN32)
   install(TARGETS pe_resource_loader DESTINATION lib)
   install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/pe_resource_loader.h DESTINATION include/)
   install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt DESTINATION share/licenses/pe_resource_loader/)
+
   if(PE_STRING_LOADER)
     install(TARGETS pe_string_loader DESTINATION bin)
   endif(PE_STRING_LOADER)
+
+  if(PE_BITMAP_LOADER)
+    install(TARGETS pe_bitmap_loader DESTINATION bin)
+  endif(PE_BITMAP_LOADER)
 endif(NOT WIN32)
