@@ -4,6 +4,11 @@
 #include <string.h>
 #include <assert.h>
 
+#define TM_UNICODE_IMPLEMENTATION
+#define TMU_NO_FILE_IO
+#define TMU_USE_CRT
+#include "tm_unicode.h"
+
 #define EXPECTED_DOS_HEADER_MAGIC "MZ"
 #define DOS_HEADER_MAGIC_LENGTH 2
 
@@ -293,7 +298,10 @@ uint16_t PeResourceLoader_GetStringCount(PeResourceLoader *loader)
 {
   uint16_t string_directory_count = 0;
   ResourceDirectoryEntry * string_directories = PeResourceLoader_GetStringDirectories(loader, &string_directory_count);
-  uint16_t last_directory_id = string_directories[string_directory_count-1].name_offset_or_id;
+  uint16_t last_directory_id = 0;
+  if (string_directory_count > 0) {
+    last_directory_id = string_directories[string_directory_count-1].name_offset_or_id;
+  }
   free(string_directories);
 
   return last_directory_id * 16;
@@ -351,21 +359,35 @@ uint16_t * PeResourceLoader_GetStringDataEntryData(PeResourceLoader * loader, Re
 }
 
 uint8_t * PeResourceLoader_Utf16ToUtf8(uint16_t * string_data, uint16_t * length) {
-  // This code basically pretends we're using ASCII and skips everything else
-
-  uint8_t * output_string = (uint8_t *) calloc(*length, sizeof(uint8_t));
-  for (uint16_t i = 0; i < *length; i++) {
-    if (string_data[i] >= 0xD800) {
-      // Code does not deal with surrogate pairs at the moment
-      continue;
-    } else if (string_data[i] > 0x7F) {
-      // Don't deal with complex utf-8 strings either for now
-      continue;
-    } else {
-      output_string[i] = (uint8_t) string_data[i];
-    }
+  uint8_t * output_string = (uint8_t *) calloc(*length + 1, sizeof(uint8_t));  // +1 for null terminator
+  tmu_conversion_result result = tmu_utf8_convert_from_bytes(
+    string_data,
+    *length * sizeof(uint16_t),
+    tmu_encoding_utf16le,
+    tmu_validate_replace,
+    "?",
+    1,
+    1,
+    output_string,
+    (size_t) *length + 1
+  );
+  if (result.ec == TM_ERANGE) {
+    // If the utf-8 string is bigger than the utf16 string, retry with the new correct size
+    free(output_string);
+    output_string = (uint8_t *) calloc(result.size, sizeof(uint8_t));
+    tmu_utf8_convert_from_bytes(
+      string_data,
+      *length * sizeof(uint16_t),
+      tmu_encoding_utf16le,
+      tmu_validate_replace,
+      "?",
+      1,
+      1,
+      output_string,
+      result.size
+    );
   }
-
+  *length = result.size;
   return output_string;
 }
 

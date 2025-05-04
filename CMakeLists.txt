@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 
 project(pe_resource_loader)
 
-add_library(pe_resource_loader src/pe_resource_loader.c)
+add_library(pe_resource_loader src/pe_resource_loader.c src/tm_unicode.h)
 target_include_directories(pe_resource_loader PRIVATE
   include/
 )
