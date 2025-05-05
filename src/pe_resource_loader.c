@@ -279,7 +279,7 @@ void * PeResourceLoader_GetDataEntryData(PeResourceLoader * loader, ResourceData
   return data;
 }
 
-uint8_t * PeResourceLoader_Utf16ToUtf8(uint16_t * string_data, uint16_t * length) {
+uint8_t * PeResourceLoader_Utf16ToUtf8(uint16_t * string_data, uint32_t * length) {
   uint8_t * output_string = (uint8_t *) calloc(*length + 1, sizeof(uint8_t));  // +1 for null terminator
   tmu_conversion_result result = tmu_utf8_convert_from_bytes(
     string_data,
@@ -364,6 +364,28 @@ uint32_t * PeResourceLoader_GetResourceIds(PeResourceLoader * loader, PRL_Type r
   return resource_ids;
 }
 
+uint8_t * PeResourceLoader_ProcessCursorData(PeResourceLoader * loader, uint8_t * data, uint32_t * size) {
+  uint8_t cursor_header[] = {0x00, 0x00, 0x02, 0x00, 0x01, 0x00, 0x20, 0x20, 0x00, 0x00, 0x01, 0x00, 0x02, 0x00, 0xa8, 0x08, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00};
+  uint8_t * return_data = calloc(sizeof(uint8_t), sizeof(cursor_header) + *size - 4);
+  memcpy(return_data, cursor_header, sizeof(cursor_header) * sizeof(uint8_t));
+  memcpy(return_data + (sizeof(cursor_header) * sizeof(uint8_t)), data + 4, *size - 4);
+  free(data);
+
+  *size = sizeof(cursor_header) * sizeof(uint8_t) + *size - 4;
+  return return_data;
+}
+
+uint8_t * PeResourceLoader_ProcessIconData(PeResourceLoader * loader, uint8_t * data, uint32_t * size) {
+  uint8_t icon_header[] = {0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x20, 0x40, 0x00, 0x00, 0x01, 0x00, 0x08, 0x00, 0xa8, 0x08, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00};
+  uint8_t * return_data = calloc(sizeof(uint8_t), sizeof(icon_header) + *size);
+  memcpy(return_data, icon_header, sizeof(icon_header) * sizeof(uint8_t));
+  memcpy(return_data + (sizeof(icon_header) * sizeof(uint8_t)), data, *size);
+  free(data);
+
+  *size = sizeof(icon_header) * sizeof(uint8_t) + *size;
+  return return_data;
+}
+
 uint8_t * PeResourceLoader_ProcessBitmapData(PeResourceLoader * loader, uint8_t * data, uint32_t * size) {
   uint8_t bmp_header[] = {0x42, 0x4d, 0x38, 0xf9, 0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x36, 0x00, 0x00, 0x00};
   uint8_t * return_data = calloc(sizeof(uint8_t), sizeof(bmp_header) + *size);
@@ -386,7 +408,7 @@ uint8_t * PeResourceLoader_ProcessStringData(PeResourceLoader * loader, uint32_t
   for(int i = 0; i < *size; i++) {
       if (utf16_string[i]) {
         if (id == string_id) {
-          string = PeResourceLoader_Utf16ToUtf8(utf16_string + i + 1, &utf16_string[i]);
+          string = PeResourceLoader_Utf16ToUtf8(utf16_string + i + 1, (uint32_t *) &utf16_string[i]);
           *size = utf16_string[i];
           free(utf16_string);
 
@@ -401,6 +423,17 @@ uint8_t * PeResourceLoader_ProcessStringData(PeResourceLoader * loader, uint32_t
   return string;
 }
 
+uint8_t * PeResourceLoader_ProcessTextData(PeResourceLoader * loader, uint8_t * data, uint32_t * size) {
+  uint16_t * utf16_string = (uint16_t *) calloc(1, *size);
+  memcpy(utf16_string, data, *size);
+  free(data);
+
+  uint8_t * string = PeResourceLoader_Utf16ToUtf8(utf16_string, size);
+  free(utf16_string);
+
+  return string;
+}
+
 uint8_t * PeResourceLoader_ProcessResourceData(PeResourceLoader * loader, PRL_Type resource_type, uint8_t * data, uint32_t * size, uint32_t string_id) {
   switch (resource_type) {
     case PRL_TYPE_STRING:
@@ -408,6 +441,12 @@ uint8_t * PeResourceLoader_ProcessResourceData(PeResourceLoader * loader, PRL_Ty
       break;
     case PRL_TYPE_BITMAP:
       data = PeResourceLoader_ProcessBitmapData(loader, data, size);
+      break;
+    case PRL_TYPE_ICON:
+      data = PeResourceLoader_ProcessIconData(loader, data, size);
+      break;
+    case PRL_TYPE_CURSOR:
+      data = PeResourceLoader_ProcessCursorData(loader, data, size);
       break;
     default:
       break;
