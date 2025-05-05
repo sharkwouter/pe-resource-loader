@@ -25,28 +25,6 @@
 
 #define MAX_LANG_COUNT 1024
 
-typedef enum {
-  PRL_TYPE_CURSOR=1,
-  PRL_TYPE_BITMAP=2,
-  PRL_TYPE_ICON=3,
-  PRL_TYPE_MENU=4,
-  PRL_TYPE_DIALOG=5,
-  PRL_TYPE_STRING=6,
-  PRL_TYPE_FONTDIR=7,
-  PRL_TYPE_FONT=8,
-  PRL_TYPE_ACCELERATOR=9,
-  PRL_TYPE_RCDATA=10,
-  PRL_TYPE_MESSAGETABLE=11,
-  PRL_TYPE_VERSION=16,
-  PRL_TYPE_DLGINCLUDE=17,
-  PRL_TYPE_PLUGPLAY=19,
-  PRL_TYPE_VXD=20,
-  PRL_TYPE_ANICURSOR=21,
-  PRL_TYPE_ANIICON=22,
-  PRL_TYPE_HTML=23,
-  PRL_TYPE_MANIFEST=24
-} PRL_Type;
-
 typedef struct __attribute__((packed)) {
   uint8_t   magic[2];
   uint8_t   unused[58];
@@ -245,44 +223,6 @@ ResourceDirectoryEntry * PeResourceLoader_GetDirectoryEntryById(PeResourceLoader
     return NULL;
 }
 
-uint32_t * PeResourceLoader_GetLanguageIds(PeResourceLoader * loader, uint16_t * language_count, PRL_Type type) {
-  *language_count = 0;
-  ResourceDirectoryEntry * rt_string_entry = PeResourceLoader_GetDirectoryEntryById(loader, 0, type);
-  if (rt_string_entry == NULL) {
-    return NULL;
-  }
-  uint32_t * languages = (uint32_t *) calloc(MAX_LANG_COUNT, sizeof(uint32_t));
-
-  uint16_t string_directory_count = 0;
-  ResourceDirectoryEntry * string_directories = PeResourceLoader_GetDirectoryIdEntries(loader, rt_string_entry->data_or_subdirectory_offset & 0x7FFFFFFF, &string_directory_count);
-  free(rt_string_entry);
-  for (uint16_t string_directory_index = 0; string_directory_index < string_directory_count; string_directory_index++) {
-    uint16_t language_directory_count = 0;
-    ResourceDirectoryEntry * language_directories = PeResourceLoader_GetDirectoryIdEntries(loader, string_directories[string_directory_index].data_or_subdirectory_offset  & 0x7FFFFFFF, &language_directory_count);
-    for (uint16_t language_directory_index = 0; language_directory_index < language_directory_count; language_directory_index++) {
-      uint8_t language_found = 0;
-      for(uint16_t language_index = 0; language_index < *language_count; language_index++) {
-        if (language_directories[language_directory_index].name_offset_or_id == languages[language_index]) {
-          language_found = 1;
-          break;
-        }
-      }
-      if (!language_found) {
-        languages[*language_count] = language_directories[language_directory_index].name_offset_or_id;
-        *language_count = *language_count + 1;
-      }
-    }
-    free(language_directories);
-  }
-  free(string_directories);
-
-  return languages;
-}
-
-uint32_t * PeResourceLoader_GetStringLanguageIds(PeResourceLoader * loader, uint16_t * language_count) {
-  return PeResourceLoader_GetLanguageIds(loader, language_count, PRL_TYPE_STRING);
-}
-
 ResourceDirectoryEntry *  PeResourceLoader_GetDirectories(PeResourceLoader *loader, uint16_t * directory_count, PRL_Type type) {
   if (directory_count != NULL) {
     *directory_count = 0;
@@ -296,22 +236,6 @@ ResourceDirectoryEntry *  PeResourceLoader_GetDirectories(PeResourceLoader *load
   free(rt_entry);
 
   return PeResourceLoader_GetDirectoryIdEntries(loader, subdirectory_offset, directory_count);
-}
-
-uint32_t * PeResourceLoader_GetStringIds(PeResourceLoader * loader, uint16_t * string_count) {
-  *string_count = 0;
-  uint16_t string_directory_count = 0;
-  ResourceDirectoryEntry * string_directories = PeResourceLoader_GetDirectories(loader, &string_directory_count, PRL_TYPE_STRING);
-  uint32_t * string_ids = calloc(sizeof(uint32_t) * 16, string_directory_count);
-  for (uint16_t directory_index = 0; directory_index < string_directory_count; directory_index++) {
-    for (uint8_t i = 0; i < 16; i++) {
-      // The first id is one, so we have to substract one before multiplying by 16
-      string_ids[directory_index * 16 + i] = (string_directories[directory_index].name_offset_or_id - 1) * 16 + i;
-      *string_count = *string_count + 1;
-    }
-  }
-
-  return string_ids;
 }
 
 ResourceDataEntry * PeResourceLoader_GetDataEntry(PeResourceLoader * loader, uint32_t language_id, uint32_t entry_id, PRL_Type type) {
@@ -341,28 +265,18 @@ ResourceDataEntry * PeResourceLoader_GetDataEntry(PeResourceLoader * loader, uin
   return data_entry;
 }
 
-uint8_t * PeResourceLoader_GetDataEntryData(PeResourceLoader * loader, ResourceDataEntry * data_entry) {
+void * PeResourceLoader_GetDataEntryData(PeResourceLoader * loader, ResourceDataEntry * data_entry) {
   if (!data_entry) {
     return NULL;
   }
 
-  uint8_t * data = (uint8_t *) calloc(1, data_entry->size);
+  void * data = calloc(1, data_entry->size);
   uint32_t data_offset = data_entry->offset_to_data - loader->resource_virtual_address  + loader->resource_offset;
 
   fseek(loader->fd, data_offset, SEEK_SET);
   fread(data, 1, data_entry->size, loader->fd);
 
   return data;
-}
-
-uint16_t * PeResourceLoader_GetStringDataEntryData(PeResourceLoader * loader, ResourceDataEntry * data_entry) {
-  // Strings are utf 16, which means it is really hard to work with when it is saved in uint8_t
-  uint8_t * raw_data = PeResourceLoader_GetDataEntryData(loader, data_entry);
-  uint16_t * return_data = calloc(1, data_entry->size);
-  memcpy(return_data, raw_data, data_entry->size);
-  free(raw_data);
-
-  return return_data;
 }
 
 uint8_t * PeResourceLoader_Utf16ToUtf8(uint16_t * string_data, uint16_t * length) {
@@ -398,76 +312,137 @@ uint8_t * PeResourceLoader_Utf16ToUtf8(uint16_t * string_data, uint16_t * length
   return output_string;
 }
 
-uint8_t * PeResourceLoader_GetString(PeResourceLoader * loader, uint32_t language_id, uint32_t string_id, uint16_t * length) {
-  if (length != NULL) {
-    *length = 0;
-  }
+uint32_t * PeResourceLoader_GetLanguageIds(PeResourceLoader * loader, uint16_t * language_count) {
+  *language_count = 0;
+  uint32_t * languages = (uint32_t *) calloc(MAX_LANG_COUNT, sizeof(uint32_t));
 
-  // The string directory id - 1 * 16 is the id of the first entry in the resource data entries in it, because each one contains 16 strings in each language in it
-  uint32_t string_entry_id = string_id / 16 + 1;
-  ResourceDataEntry * string_data_entry = PeResourceLoader_GetDataEntry(loader, language_id, string_entry_id, PRL_TYPE_STRING);
-  if (!string_data_entry) {
-    return NULL;
-  }
-
-  uint16_t * data = PeResourceLoader_GetStringDataEntryData(loader, string_data_entry);
-
-  uint16_t id = (string_id & 0xFFFFFFF0);  // The first id in a list of strings rounds to base 16
-  uint16_t size = string_data_entry->size;
-  free(string_data_entry);
-
-  for(int i = 0; i < size; i++) {
-      if (data[i]) {
-        if (id == string_id) {
-          if (length != NULL) {
-            *length = data[i];
+  uint16_t resource_table_count = 0;
+  ResourceDirectoryEntry * resource_tables = PeResourceLoader_GetDirectoryIdEntries(loader, 0, &resource_table_count);
+  for (uint16_t resource_table_index = 0; resource_table_index < resource_table_count; resource_table_index++) {
+    uint16_t resource_directory_count = 0;
+    ResourceDirectoryEntry * resource_directories = PeResourceLoader_GetDirectoryIdEntries(loader, resource_tables[resource_table_index].data_or_subdirectory_offset & 0x7FFFFFFF, &resource_directory_count);
+    for (uint16_t resource_directory_index = 0; resource_directory_index < resource_directory_count; resource_directory_index++) {
+      uint16_t language_directory_count = 0;
+      ResourceDirectoryEntry * language_directories = PeResourceLoader_GetDirectoryIdEntries(loader, resource_directories[resource_directory_index].data_or_subdirectory_offset  & 0x7FFFFFFF, &language_directory_count);
+      for (uint16_t language_directory_index = 0; language_directory_index < language_directory_count; language_directory_index++) {
+        uint8_t language_found = 0;
+        for(uint16_t language_index = 0; language_index < *language_count; language_index++) {
+          if (language_directories[language_directory_index].name_offset_or_id == languages[language_index]) {
+            language_found = 1;
+              break;
+            }
           }
-          uint8_t * string = PeResourceLoader_Utf16ToUtf8(data + i + 1, &data[i]);
-          free(data);
+          if (!language_found) {
+            languages[*language_count] = language_directories[language_directory_index].name_offset_or_id;
+            *language_count = *language_count + 1;
+          }
+        }
+        free(language_directories);
+      }
+    free(resource_directories);
+  }
+  free(resource_tables);
+
+  return languages;
+}
+
+uint32_t * PeResourceLoader_GetResourceIds(PeResourceLoader * loader, PRL_Type resource_type, uint32_t * count) {
+  ResourceDirectoryEntry * directories = PeResourceLoader_GetDirectories(loader, (uint16_t *) count, resource_type);
+  if (resource_type == PRL_TYPE_STRING) {
+    *count = *count * 16;
+  }
+  uint32_t * resource_ids = (uint32_t *) calloc(sizeof(uint32_t), *count);
+  for(uint16_t i = 0; i < *count; i++) {
+    if (resource_type == PRL_TYPE_STRING) {
+      resource_ids[i] = (directories[i / 16].name_offset_or_id - 1) * 16 + (i % 16);
+    } else {
+      resource_ids[i] = directories[i].name_offset_or_id;
+    }
+  }
+  free(directories);
+
+  return resource_ids;
+}
+
+uint8_t * PeResourceLoader_ProcessBitmapData(PeResourceLoader * loader, uint8_t * data, uint32_t * size) {
+  uint8_t bmp_header[] = {0x42, 0x4d, 0x38, 0xf9, 0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x36, 0x00, 0x00, 0x00};
+  uint8_t * return_data = calloc(sizeof(uint8_t), sizeof(bmp_header) + *size);
+  memcpy(return_data, bmp_header, sizeof(bmp_header) * sizeof(uint8_t));
+  memcpy(return_data + (sizeof(bmp_header) * sizeof(uint8_t)), data, *size);
+  free(data);
+
+  *size = sizeof(bmp_header) * sizeof(uint8_t) + *size;
+  return return_data;
+}
+
+uint8_t * PeResourceLoader_ProcessStringData(PeResourceLoader * loader, uint32_t string_id, uint8_t * data, uint32_t * size) {
+  uint16_t * utf16_string = (uint16_t *) calloc(1, *size);
+  memcpy(utf16_string, data, *size);
+  free(data);
+
+  uint32_t id = (string_id & 0xFFFFFFFFFFFFFFF0);  // The first id in a list of strings rounds to base 16
+
+  uint8_t * string = NULL;
+  for(int i = 0; i < *size; i++) {
+      if (utf16_string[i]) {
+        if (id == string_id) {
+          string = PeResourceLoader_Utf16ToUtf8(utf16_string + i + 1, &utf16_string[i]);
+          *size = utf16_string[i];
+          free(utf16_string);
 
           return string;
         }
-        i += data[i];
+        i += utf16_string[i];
       }
       id += 1;
   }
-  free(data);
+  free(utf16_string);
 
-  return NULL;
+  return string;
 }
 
-uint32_t * PeResourceLoader_GetBitmapLanguageIds(PeResourceLoader * loader, uint16_t * language_count) {
-  return PeResourceLoader_GetLanguageIds(loader, language_count, PRL_TYPE_BITMAP);
-}
-
-uint32_t * PeResourceLoader_GetBitmapIds(PeResourceLoader * loader, uint16_t * bitmap_count) {
-  ResourceDirectoryEntry * bitmap_directories = PeResourceLoader_GetDirectories(loader, bitmap_count, PRL_TYPE_BITMAP);
-  uint32_t * bitmap_ids = (uint32_t *) calloc(sizeof(uint32_t), *bitmap_count);
-  for(uint16_t i = 0; i < *bitmap_count; i++) {
-    bitmap_ids[i] = bitmap_directories[i].name_offset_or_id;
+uint8_t * PeResourceLoader_ProcessResourceData(PeResourceLoader * loader, PRL_Type resource_type, uint8_t * data, uint32_t * size, uint32_t string_id) {
+  switch (resource_type) {
+    case PRL_TYPE_STRING:
+      data = PeResourceLoader_ProcessStringData(loader, string_id, data, size);
+      break;
+    case PRL_TYPE_BITMAP:
+      data = PeResourceLoader_ProcessBitmapData(loader, data, size);
+      break;
+    default:
+      break;
   }
-  free(bitmap_directories);
-
-  return bitmap_ids;
+  return data;
 }
 
-uint8_t *PeResourceLoader_GetBitmap(PeResourceLoader *loader, uint32_t language_id, uint32_t bitmap_id, uint32_t *length) {
-  if (length != NULL) {
-    *length = 0;
+
+uint8_t * PeResourceLoader_GetResource(PeResourceLoader * loader, PRL_Type resource_type, uint32_t language_id, uint32_t resource_id, uint32_t * size) {
+  if (size != NULL) {
+    *size = 0;
+  }
+  
+  uint32_t string_id = 0;
+  if(resource_type == PRL_TYPE_STRING) {
+    string_id = resource_id;
+    resource_id = resource_id / 16 + 1;
   }
 
-  ResourceDataEntry * data_entry = PeResourceLoader_GetDataEntry(loader, language_id, bitmap_id, PRL_TYPE_BITMAP);
+  ResourceDataEntry * data_entry = PeResourceLoader_GetDataEntry(loader, language_id, resource_id, resource_type);
   if (!data_entry) {
     return NULL;
   }
 
-  uint8_t bmp_header[] = {0x42, 0x4d, 0x38, 0xf9, 0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x36, 0x00, 0x00, 0x00};
-  *length = data_entry->size + (sizeof(bmp_header) * sizeof(uint8_t));
-  uint8_t * data = PeResourceLoader_GetDataEntryData(loader, data_entry);
+  void * data = PeResourceLoader_GetDataEntryData(loader, data_entry);
 
-  uint8_t * return_data = calloc(sizeof(uint8_t), sizeof(bmp_header) + data_entry->size);
-  memcpy(return_data, bmp_header, sizeof(bmp_header) * sizeof(uint8_t));
-  memcpy(return_data + (sizeof(bmp_header) * sizeof(uint8_t)), data, data_entry->size);
-  free(data_entry);
-  return return_data;
+  if (size != NULL) {
+    *size = data_entry->size;
+    free(data_entry);
+    data = PeResourceLoader_ProcessResourceData(loader, resource_type, data, size, string_id);
+  } else {
+    uint32_t temp_size = data_entry->size;
+    free(data_entry);
+    data = PeResourceLoader_ProcessResourceData(loader, resource_type, data, &temp_size, string_id);
+  }
+
+  return data;
 }

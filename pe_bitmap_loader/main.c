@@ -18,15 +18,15 @@ int main(int argc, char ** argv) {
     return 2;
   }
 
-  uint16_t bitmap_count = 0;
-  uint32_t * bitmap_ids = PeResourceLoader_GetBitmapIds(loader, &bitmap_count);
+  uint32_t bitmap_count = 0;
+  uint32_t * bitmap_ids = PeResourceLoader_GetResourceIds(loader, PRL_TYPE_BITMAP, &bitmap_count);
   if (bitmap_count == 0) {
     printf("No bitmaps found in file %s\n", argv[1]);
     return 3;
   }
 
   uint16_t language_count = 0;
-  uint32_t * languages = PeResourceLoader_GetBitmapLanguageIds(loader, &language_count);
+  uint32_t * languages = PeResourceLoader_GetLanguageIds(loader, &language_count);
   if (language_count == 0) {
     printf("No languages found in file %s\n", argv[1]);
     return 4;
@@ -40,10 +40,8 @@ int main(int argc, char ** argv) {
       snprintf(file_name, 30, "%u_%u.bmp\0", languages[li], bitmap_ids[bi]);
       FILE * file = fopen(file_name, "wb");
       uint32_t file_size;
-      uint8_t * data = PeResourceLoader_GetBitmap(loader, languages[li], bitmap_ids[bi], &file_size);
+      uint8_t * data = PeResourceLoader_GetResource(loader, PRL_TYPE_BITMAP, languages[li], bitmap_ids[bi], &file_size);
       printf("File size is %u\n", file_size);
-      // uint8_t bmp_header[] = {0x42, 0x4d, 0x38, 0xf9, 0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x36, 0x00, 0x00, 0x00};
-      // fwrite(bmp_header, sizeof(uint8_t), sizeof(bmp_header), file);
       fwrite(data, sizeof(uint8_t), file_size, file);
       fclose(file);
       free(data);
