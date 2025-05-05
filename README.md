@@ -1,6 +1,6 @@
 # PE Resource Loader
 
-Allow you to load resources from Windows exe and dll files even outside of Windows. For now it only supports strings.
+Allow you to load resources from Windows exe and dll files even outside of Windows. It automatically converts strings, bitmaps, icons and cursors to usable formats, other formats just give you the plain data.
 
 ## Using the PE Resource Loader Library
 
@@ -21,7 +21,7 @@ int main(int argc, char ** argv) {
   }
 
   // In this example we load string 107 in US English and we don't save the length
-  uint8_t * string = PeResourceLoader_GetString(loader, PRL_LANG_EN_US, 107, NULL);
+  uint8_t * string = PeResourceLoader_GetResource(loader, PRL_TYPE_STRING, PRL_LANG_EN_US, 107, NULL);
   if (!string) {
     printf("Could not find string 107\n");
     return 2;
