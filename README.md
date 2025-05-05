@@ -85,6 +85,6 @@ Building without building the `pe_string_loader` program can be done by running 
 
 ## Licensing
 
-This project is released under the zlib license, which requires the license to be included in source distributions, but allows for shipping binaries without any requirements.
+This project is released under the [zlib license](LICENSE.txt), which requires the license to be included in source distributions, but allows for shipping binaries without any requirements.
 
 For conversion from utf16 to utf-8 tm_unicode.h is used from the  [tm repo](https://github.com/to-miz/tm/), which is licensed under the unlicense.
