@@ -1,6 +1,6 @@
 # PE Resource Loader
 
-Allow you to load resources from Windows exe and dll files even outside of Windows. It automatically converts strings, bitmaps, icons and cursors to usable formats, other formats just give you the plain data.
+Allow you to load resources from Windows exe and dll files even outside of Windows. It automatically converts strings (PRL_TYPE_STRING), bitmaps (PRL_TYPE_BITMAP), icons (PRL_TYPE_ICON) and cursors (PRL_TYPE_CURSOR) to usable formats, other formats just give you the plain data as found in the binary.
 
 ## Using the PE Resource Loader Library
 
