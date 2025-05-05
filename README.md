@@ -82,3 +82,9 @@ sudo make install
 No dependencies are needed other than a C compiler. This code will only work on little endian systems for now.
 
 Building without building the `pe_string_loader` program can be done by running the cmake command with `-DPE_STRING_LOADER=OFF`. For building without `pe_bitmap_loader` use `-DPE_BITMAP_LOADER=OFF`.
+
+## Licensing
+
+This project is released under the zlib license, which requires the license to be included in source distributions, but allows for shipping binaries without any requirements.
+
+For conversion from utf16 to utf-8 tm_unicode.h is used from the  [tm repo](https://github.com/to-miz/tm/), which is licensed under the unlicense.
