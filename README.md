@@ -50,6 +50,16 @@ The bundled `pe_string_loader` program is mostly there to serve as an example of
 
 It will output a list of string for each included language. If the file contains no strings, nothing will be printed.
 
+## Using PE Bitmap Loader Program
+
+The bundled `pe_bitmap_loader` program is mostly there to serve as an example of how the PE Resource Loader library can be used, but it does allow getting bitmaps from binaries and DLLs without any additional code. Here is a basic example:
+
+```sh
+./pe_bitmap_loader my-file.dll
+```
+
+It will output a list of bmp files found for each included language. It will create `.bmp` files in the current working directory if it finds any. If the file contains no bitmaps, only the languages found in the binary will be printed.
+
 ## Building
 
 Building the code can be done simply by running the following commands:
@@ -71,4 +81,4 @@ sudo make install
 
 No dependencies are needed other than a C compiler. This code will only work on little endian systems for now.
 
-Building without building the `pe_string_loader` program can be done by running the cmake command with `-DPE_STRING_LOADER=OFF`.
+Building without building the `pe_string_loader` program can be done by running the cmake command with `-DPE_STRING_LOADER=OFF`. For building without `pe_bitmap_loader` use `-DPE_BITMAP_LOADER=OFF`.
