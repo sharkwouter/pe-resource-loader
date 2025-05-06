@@ -1,6 +1,10 @@
 #ifndef PE_RESOURCE_LOADER_HPP
 #define PE_RESOURCE_LOADER_HPP
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 #include <stdio.h>
 
@@ -460,5 +464,9 @@ typedef enum {
   PRL_LANG_ZU=0x0035,
   PRL_LANG_ZU_ZA=0x0435,
 } PRL_Lang;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // PE_RESOURCE_LOADER_HPP
