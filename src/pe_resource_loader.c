@@ -244,7 +244,6 @@ ResourceDataEntry * PeResourceLoader_GetDataEntry(PeResourceLoader * loader, uin
 
   ResourceDirectoryEntry * rt_language_entry = NULL;
   for (uint16_t directory_index = 0; directory_index < directory_count; directory_index++) {
-    // The string directory id - 1 * 16 is the id of the first entry in the resource data entries in it, because each one contains 16 strings in each language in it
     if (directories[directory_index].name_offset_or_id == entry_id) {
       rt_language_entry = PeResourceLoader_GetDirectoryEntryById(loader, directories[directory_index].data_or_subdirectory_offset & 0x7FFFFFFF, language_id);
       break;
@@ -265,12 +264,12 @@ ResourceDataEntry * PeResourceLoader_GetDataEntry(PeResourceLoader * loader, uin
   return data_entry;
 }
 
-void * PeResourceLoader_GetDataEntryData(PeResourceLoader * loader, ResourceDataEntry * data_entry) {
+uint8_t * PeResourceLoader_GetDataEntryData(PeResourceLoader * loader, ResourceDataEntry * data_entry) {
   if (!data_entry) {
     return NULL;
   }
 
-  void * data = calloc(1, data_entry->size);
+  uint8_t * data = calloc(1, data_entry->size);
   uint32_t data_offset = data_entry->offset_to_data - loader->resource_virtual_address  + loader->resource_offset;
 
   fseek(loader->fd, data_offset, SEEK_SET);
@@ -279,7 +278,7 @@ void * PeResourceLoader_GetDataEntryData(PeResourceLoader * loader, ResourceData
   return data;
 }
 
-uint8_t * PeResourceLoader_Utf16ToUtf8(uint16_t * string_data, uint32_t * length) {
+uint8_t * PeResourceLoader_Utf16ToUtf8(uint16_t * string_data, uint16_t * length) {
   uint8_t * output_string = (uint8_t *) calloc(*length + 1, sizeof(uint8_t));  // +1 for null terminator
   tmu_conversion_result result = tmu_utf8_convert_from_bytes(
     string_data,
@@ -401,14 +400,13 @@ uint8_t * PeResourceLoader_ProcessStringData(PeResourceLoader * loader, uint32_t
   uint16_t * utf16_string = (uint16_t *) calloc(1, *size);
   memcpy(utf16_string, data, *size);
   free(data);
-
   uint32_t id = (string_id & 0xFFFFFFFFFFFFFFF0);  // The first id in a list of strings rounds to base 16
 
   uint8_t * string = NULL;
   for(int i = 0; i < *size; i++) {
       if (utf16_string[i]) {
         if (id == string_id) {
-          string = PeResourceLoader_Utf16ToUtf8(utf16_string + i + 1, (uint32_t *) &utf16_string[i]);
+          string = PeResourceLoader_Utf16ToUtf8(utf16_string + i + 1, &utf16_string[i]);
           *size = utf16_string[i];
           free(utf16_string);
 
@@ -418,17 +416,6 @@ uint8_t * PeResourceLoader_ProcessStringData(PeResourceLoader * loader, uint32_t
       }
       id += 1;
   }
-  free(utf16_string);
-
-  return string;
-}
-
-uint8_t * PeResourceLoader_ProcessTextData(PeResourceLoader * loader, uint8_t * data, uint32_t * size) {
-  uint16_t * utf16_string = (uint16_t *) calloc(1, *size);
-  memcpy(utf16_string, data, *size);
-  free(data);
-
-  uint8_t * string = PeResourceLoader_Utf16ToUtf8(utf16_string, size);
   free(utf16_string);
 
   return string;
@@ -471,7 +458,11 @@ uint8_t * PeResourceLoader_GetResource(PeResourceLoader * loader, PRL_Type resou
     return NULL;
   }
 
-  void * data = PeResourceLoader_GetDataEntryData(loader, data_entry);
+  uint8_t * data = PeResourceLoader_GetDataEntryData(loader, data_entry);
+  if (!data) {
+    free(data_entry);
+    return NULL;
+  }
 
   if (size != NULL) {
     *size = data_entry->size;
