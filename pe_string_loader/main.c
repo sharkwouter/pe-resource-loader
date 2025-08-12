@@ -42,6 +42,7 @@ int main(int argc, char ** argv) {
     printf("\n");
   }
   free(languages);
+  free(string_ids);
 
   PeResourceLoader_Close(loader);
 

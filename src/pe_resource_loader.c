@@ -105,6 +105,7 @@ PeResourceLoader * PeResourceLoader_Open(const char * file_path) {
   PeResourceLoader * loader = (PeResourceLoader *) calloc(sizeof(PeResourceLoader), 1);
   loader->fd = fopen(file_path, "rb");
   if (loader->fd == NULL) {
+    free(loader);
     return NULL;
   }
   
@@ -176,6 +177,7 @@ PeResourceLoader * PeResourceLoader_Open(const char * file_path) {
         break;
       }
     }
+    free(section_headers);
     if (loader->resource_offset == 0 || loader->resource_virtual_address == 0) {
       fclose(loader->fd);
       free(loader);

@@ -22,6 +22,10 @@ int main(int argc, char ** argv) {
   uint32_t * bitmap_ids = PeResourceLoader_GetResourceIds(loader, PRL_TYPE_BITMAP, &bitmap_count);
   if (bitmap_count == 0) {
     printf("No bitmaps found in file %s\n", argv[1]);
+    PeResourceLoader_Close(loader);
+    if (bitmap_ids) {
+      free(bitmap_ids);
+    }
     return 3;
   }
 
