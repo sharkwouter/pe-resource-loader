@@ -29,13 +29,13 @@ typedef struct __attribute__((packed)) {
   uint8_t   magic[2];
   uint8_t   unused[58];
   int32_t   nt_header_offset;
-} DosHeader;
+} PRL_DosHeader;
 
 typedef struct __attribute__((packed)) {
   uint16_t  machine;
   uint16_t  number_of_sections;
   uint8_t   unused[16];
-} FileHeader;
+} PRL_FileHeader;
 
 typedef struct __attribute__((packed)) {
   uint16_t  magic;
@@ -44,7 +44,7 @@ typedef struct __attribute__((packed)) {
   uint32_t  file_alignment;
   uint8_t   unused2[52];
   uint32_t  number_of_data_directories;
-} OptionalHeader;
+} PRL_OptionalHeader;
 
 typedef struct __attribute__((packed)) {
   uint16_t  magic;
@@ -53,12 +53,12 @@ typedef struct __attribute__((packed)) {
   uint32_t  file_alignment;
   uint8_t   unused2[68];
   uint32_t  number_of_data_directories;
-} OptionalHeader64;
+} PRL_OptionalHeader64;
 
 typedef struct __attribute__((packed)) {
   uint32_t  offset;
   uint32_t  size;
-} DataDirectory;
+} PRL_DataDirectory;
 
 typedef struct __attribute__((packed)) {
   uint8_t   name[SHORT_NAME_SIZE];
@@ -67,36 +67,36 @@ typedef struct __attribute__((packed)) {
   uint32_t  size;
   uint32_t  address;
   uint8_t   unused[16];
-} SectionHeader;
+} PRL_SectionHeader;
 
 typedef struct __attribute__((packed)) {
   uint8_t   unused[12];
   uint16_t  number_of_name_entries;
   uint16_t  number_of_id_entries;
-} ResourceDirectoryTable;
+} PRL_ResourceDirectoryTable;
 
 typedef struct __attribute__((packed)) {
   uint32_t  name_offset_or_id;
   uint32_t  data_or_subdirectory_offset;
-} ResourceDirectoryEntry;
+} PRL_ResourceDirectoryEntry;
 
 typedef struct __attribute__((packed)) {
   uint32_t  offset_to_data;
   uint32_t  size;
   uint32_t  code_page;
   uint32_t  reserved;
-} ResourceDataEntry;
+} PE_ResourceDataEntry;
 
 static void validate_library() {
   // If any of these fail, you'll need to rewrite the way this library reads data to get it to work
-  assert(sizeof(DosHeader) == 64);
-  assert(sizeof(FileHeader) == 20);
-  assert(sizeof(OptionalHeader) == 96);
-  assert(sizeof(OptionalHeader64) == 112);
-  assert(sizeof(DataDirectory) == 8);
-  assert(sizeof(SectionHeader) == 40);
-  assert(sizeof(ResourceDirectoryTable) == 16);
-  assert(sizeof(ResourceDirectoryEntry) == 8);
+  assert(sizeof(PRL_DosHeader) == 64);
+  assert(sizeof(PRL_FileHeader) == 20);
+  assert(sizeof(PRL_OptionalHeader) == 96);
+  assert(sizeof(PRL_OptionalHeader64) == 112);
+  assert(sizeof(PRL_DataDirectory) == 8);
+  assert(sizeof(PRL_SectionHeader) == 40);
+  assert(sizeof(PRL_ResourceDirectoryTable) == 16);
+  assert(sizeof(PRL_ResourceDirectoryEntry) == 8);
 }
 
 PeResourceLoader * PeResourceLoader_Open(const char * file_path) {
@@ -111,8 +111,8 @@ PeResourceLoader * PeResourceLoader_Open(const char * file_path) {
   
   {
     // Get DOS header and verify it is a DOS header
-    DosHeader dos_header;
-    fread(&dos_header, sizeof(DosHeader), 1, loader->fd);
+    PRL_DosHeader dos_header;
+    fread(&dos_header, sizeof(PRL_DosHeader), 1, loader->fd);
     if (strncmp((char *) dos_header.magic, EXPECTED_DOS_HEADER_MAGIC, DOS_HEADER_MAGIC_LENGTH) != 0) {
       fclose(loader->fd);
       free(loader);
@@ -132,34 +132,34 @@ PeResourceLoader * PeResourceLoader_Open(const char * file_path) {
 
   {
     // Get file header and verify machine type is a supported type
-    FileHeader file_header;
-    fread(&file_header, sizeof(FileHeader), 1, loader->fd);
+    PRL_FileHeader file_header;
+    fread(&file_header, sizeof(PRL_FileHeader), 1, loader->fd);
     switch (file_header.machine) {
       case i386:
         {
           // Get the number of data directories
-          OptionalHeader optional_header;
-          fread(&optional_header, sizeof(OptionalHeader), 1, loader->fd);
+          PRL_OptionalHeader optional_header;
+          fread(&optional_header, sizeof(PRL_OptionalHeader), 1, loader->fd);
           if (optional_header.magic != PE32) {
             fclose(loader->fd);
             free(loader);
             return NULL;
           }
           // Move cursor to the section header
-          fseek(loader->fd, sizeof(DataDirectory) * optional_header.number_of_data_directories, SEEK_CUR);
+          fseek(loader->fd, sizeof(PRL_DataDirectory) * optional_header.number_of_data_directories, SEEK_CUR);
         }
         break;
       case AMD64:
         {
           // Get the number of data directories
-          OptionalHeader64 optional_header;
-          fread(&optional_header, sizeof(OptionalHeader64), 1, loader->fd);
+          PRL_OptionalHeader64 optional_header;
+          fread(&optional_header, sizeof(PRL_OptionalHeader64), 1, loader->fd);
           if (optional_header.magic != PE32PLUS) {
             PeResourceLoader_Close(loader);
             return NULL;
           }
           // Move cursor to the section header
-          fseek(loader->fd, sizeof(DataDirectory) * optional_header.number_of_data_directories, SEEK_CUR);
+          fseek(loader->fd, sizeof(PRL_DataDirectory) * optional_header.number_of_data_directories, SEEK_CUR);
         }
         break;
       default:
@@ -168,8 +168,8 @@ PeResourceLoader * PeResourceLoader_Open(const char * file_path) {
     }
 
     // Read the section headers
-    SectionHeader * section_headers = (SectionHeader *) calloc(file_header.number_of_sections, sizeof(SectionHeader));
-    fread(section_headers, sizeof(SectionHeader), file_header.number_of_sections, loader->fd);
+    PRL_SectionHeader * section_headers = (PRL_SectionHeader *) calloc(file_header.number_of_sections, sizeof(PRL_SectionHeader));
+    fread(section_headers, sizeof(PRL_SectionHeader), file_header.number_of_sections, loader->fd);
     for(int i = 0; i < file_header.number_of_sections; i++) {
       if (strcmp(".rsrc", (char *) section_headers[i].name) == 0) {
         loader->resource_offset = section_headers[i].address;
@@ -194,28 +194,28 @@ void PeResourceLoader_Close(PeResourceLoader * loader) {
   loader = NULL;
 }
 
-ResourceDirectoryEntry * PeResourceLoader_GetDirectoryIdEntries(PeResourceLoader * loader, uint32_t offset, uint16_t * entry_count) {
+PRL_ResourceDirectoryEntry * PeResourceLoader_GetDirectoryIdEntries(PeResourceLoader * loader, uint32_t offset, uint16_t * entry_count) {
   offset = loader->resource_offset + offset;
 
-  ResourceDirectoryTable resource_directory_table;
+  PRL_ResourceDirectoryTable resource_directory_table;
   fseek(loader->fd, offset, SEEK_SET);
-  fread(&resource_directory_table, sizeof(ResourceDirectoryTable), 1, loader->fd);
+  fread(&resource_directory_table, sizeof(PRL_ResourceDirectoryTable), 1, loader->fd);
   *entry_count = resource_directory_table.number_of_id_entries;
 
   // Skip named entries
-  fseek(loader->fd, sizeof(ResourceDirectoryEntry) * resource_directory_table.number_of_name_entries, SEEK_CUR);
-  ResourceDirectoryEntry * directory_entries = (ResourceDirectoryEntry *) calloc(resource_directory_table.number_of_id_entries, sizeof(ResourceDirectoryEntry));
-  fread(directory_entries, sizeof(ResourceDirectoryEntry), resource_directory_table.number_of_id_entries, loader->fd);
+  fseek(loader->fd, sizeof(PRL_ResourceDirectoryEntry) * resource_directory_table.number_of_name_entries, SEEK_CUR);
+  PRL_ResourceDirectoryEntry * directory_entries = (PRL_ResourceDirectoryEntry *) calloc(resource_directory_table.number_of_id_entries, sizeof(PRL_ResourceDirectoryEntry));
+  fread(directory_entries, sizeof(PRL_ResourceDirectoryEntry), resource_directory_table.number_of_id_entries, loader->fd);
   return directory_entries;
 }
 
-ResourceDirectoryEntry * PeResourceLoader_GetDirectoryEntryById(PeResourceLoader * loader, uint32_t offset, uint32_t id) {
+PRL_ResourceDirectoryEntry * PeResourceLoader_GetDirectoryEntryById(PeResourceLoader * loader, uint32_t offset, uint32_t id) {
     uint16_t entry_count = 0;
-    ResourceDirectoryEntry * entries = PeResourceLoader_GetDirectoryIdEntries(loader, offset, &entry_count);
+    PRL_ResourceDirectoryEntry * entries = PeResourceLoader_GetDirectoryIdEntries(loader, offset, &entry_count);
     for (uint16_t i = 0; i < entry_count; i++) {
       if (entries[i].name_offset_or_id == id) {
-        ResourceDirectoryEntry * entry = (ResourceDirectoryEntry *) calloc(1, sizeof(ResourceDirectoryEntry));
-        memcpy(entry, &entries[i], sizeof(ResourceDirectoryEntry));
+        PRL_ResourceDirectoryEntry * entry = (PRL_ResourceDirectoryEntry *) calloc(1, sizeof(PRL_ResourceDirectoryEntry));
+        memcpy(entry, &entries[i], sizeof(PRL_ResourceDirectoryEntry));
         free(entries);
         return entry;
       } 
@@ -225,12 +225,12 @@ ResourceDirectoryEntry * PeResourceLoader_GetDirectoryEntryById(PeResourceLoader
     return NULL;
 }
 
-ResourceDirectoryEntry *  PeResourceLoader_GetDirectories(PeResourceLoader *loader, uint16_t * directory_count, PRL_Type type) {
+PRL_ResourceDirectoryEntry *  PeResourceLoader_GetDirectories(PeResourceLoader *loader, uint16_t * directory_count, PRL_Type type) {
   if (directory_count != NULL) {
     *directory_count = 0;
   }
 
-  ResourceDirectoryEntry * rt_entry = PeResourceLoader_GetDirectoryEntryById(loader, 0, type);
+  PRL_ResourceDirectoryEntry * rt_entry = PeResourceLoader_GetDirectoryEntryById(loader, 0, type);
   if (rt_entry == NULL) {
     return NULL;
   }
@@ -240,11 +240,11 @@ ResourceDirectoryEntry *  PeResourceLoader_GetDirectories(PeResourceLoader *load
   return PeResourceLoader_GetDirectoryIdEntries(loader, subdirectory_offset, directory_count);
 }
 
-ResourceDataEntry * PeResourceLoader_GetDataEntry(PeResourceLoader * loader, uint32_t language_id, uint32_t entry_id, PRL_Type type) {
+PE_ResourceDataEntry * PeResourceLoader_GetDataEntry(PeResourceLoader * loader, uint32_t language_id, uint32_t entry_id, PRL_Type type) {
   uint16_t directory_count = 0;
-  ResourceDirectoryEntry * directories = PeResourceLoader_GetDirectories(loader, &directory_count, type);
+  PRL_ResourceDirectoryEntry * directories = PeResourceLoader_GetDirectories(loader, &directory_count, type);
 
-  ResourceDirectoryEntry * rt_language_entry = NULL;
+  PRL_ResourceDirectoryEntry * rt_language_entry = NULL;
   for (uint16_t directory_index = 0; directory_index < directory_count; directory_index++) {
     if (directories[directory_index].name_offset_or_id == entry_id) {
       rt_language_entry = PeResourceLoader_GetDirectoryEntryById(loader, directories[directory_index].data_or_subdirectory_offset & 0x7FFFFFFF, language_id);
@@ -258,15 +258,15 @@ ResourceDataEntry * PeResourceLoader_GetDataEntry(PeResourceLoader * loader, uin
   }
 
   // Need to read a resource data entry
-  ResourceDataEntry * data_entry = calloc(sizeof(ResourceDataEntry), 1);
+  PE_ResourceDataEntry * data_entry = calloc(sizeof(PE_ResourceDataEntry), 1);
   fseek(loader->fd, loader->resource_offset + (rt_language_entry->data_or_subdirectory_offset & 0x7FFFFFFF), SEEK_SET);
-  fread(data_entry, sizeof(ResourceDataEntry), 1, loader->fd);
+  fread(data_entry, sizeof(PE_ResourceDataEntry), 1, loader->fd);
   free(rt_language_entry);
 
   return data_entry;
 }
 
-void * PeResourceLoader_GetDataEntryData(PeResourceLoader * loader, ResourceDataEntry * data_entry) {
+void * PeResourceLoader_GetDataEntryData(PeResourceLoader * loader, PE_ResourceDataEntry * data_entry) {
   if (!data_entry) {
     return NULL;
   }
@@ -318,13 +318,13 @@ uint32_t * PeResourceLoader_GetLanguageIds(PeResourceLoader * loader, uint16_t *
   uint32_t * languages = (uint32_t *) calloc(MAX_LANG_COUNT, sizeof(uint32_t));
 
   uint16_t resource_table_count = 0;
-  ResourceDirectoryEntry * resource_tables = PeResourceLoader_GetDirectoryIdEntries(loader, 0, &resource_table_count);
+  PRL_ResourceDirectoryEntry * resource_tables = PeResourceLoader_GetDirectoryIdEntries(loader, 0, &resource_table_count);
   for (uint16_t resource_table_index = 0; resource_table_index < resource_table_count; resource_table_index++) {
     uint16_t resource_directory_count = 0;
-    ResourceDirectoryEntry * resource_directories = PeResourceLoader_GetDirectoryIdEntries(loader, resource_tables[resource_table_index].data_or_subdirectory_offset & 0x7FFFFFFF, &resource_directory_count);
+    PRL_ResourceDirectoryEntry * resource_directories = PeResourceLoader_GetDirectoryIdEntries(loader, resource_tables[resource_table_index].data_or_subdirectory_offset & 0x7FFFFFFF, &resource_directory_count);
     for (uint16_t resource_directory_index = 0; resource_directory_index < resource_directory_count; resource_directory_index++) {
       uint16_t language_directory_count = 0;
-      ResourceDirectoryEntry * language_directories = PeResourceLoader_GetDirectoryIdEntries(loader, resource_directories[resource_directory_index].data_or_subdirectory_offset  & 0x7FFFFFFF, &language_directory_count);
+      PRL_ResourceDirectoryEntry * language_directories = PeResourceLoader_GetDirectoryIdEntries(loader, resource_directories[resource_directory_index].data_or_subdirectory_offset  & 0x7FFFFFFF, &language_directory_count);
       for (uint16_t language_directory_index = 0; language_directory_index < language_directory_count; language_directory_index++) {
         uint8_t language_found = 0;
         for(uint16_t language_index = 0; language_index < *language_count; language_index++) {
@@ -348,7 +348,7 @@ uint32_t * PeResourceLoader_GetLanguageIds(PeResourceLoader * loader, uint16_t *
 }
 
 uint32_t * PeResourceLoader_GetResourceIds(PeResourceLoader * loader, PRL_Type resource_type, uint32_t * count) {
-  ResourceDirectoryEntry * directories = PeResourceLoader_GetDirectories(loader, (uint16_t *) count, resource_type);
+  PRL_ResourceDirectoryEntry * directories = PeResourceLoader_GetDirectories(loader, (uint16_t *) count, resource_type);
   if (resource_type == PRL_TYPE_STRING) {
     *count = *count * 16;
   }
@@ -458,7 +458,7 @@ void * PeResourceLoader_GetResource(PeResourceLoader * loader, PRL_Type resource
     resource_id = resource_id / 16 + 1;
   }
 
-  ResourceDataEntry * data_entry = PeResourceLoader_GetDataEntry(loader, language_id, resource_id, resource_type);
+  PE_ResourceDataEntry * data_entry = PeResourceLoader_GetDataEntry(loader, language_id, resource_id, resource_type);
   if (!data_entry) {
     return NULL;
   }
