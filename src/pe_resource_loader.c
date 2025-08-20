@@ -2,7 +2,10 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
+
+#ifdef DEBUG
+  #include <assert.h>
+#endif
 
 #define TM_UNICODE_IMPLEMENTATION
 #define TMU_NO_FILE_IO
@@ -87,20 +90,24 @@ typedef struct __attribute__((packed)) {
   uint32_t  reserved;
 } PE_ResourceDataEntry;
 
-static void validate_library() {
-  // If any of these fail, you'll need to rewrite the way this library reads data to get it to work
-  assert(sizeof(PRL_DosHeader) == 64);
-  assert(sizeof(PRL_FileHeader) == 20);
-  assert(sizeof(PRL_OptionalHeader) == 96);
-  assert(sizeof(PRL_OptionalHeader64) == 112);
-  assert(sizeof(PRL_DataDirectory) == 8);
-  assert(sizeof(PRL_SectionHeader) == 40);
-  assert(sizeof(PRL_ResourceDirectoryTable) == 16);
-  assert(sizeof(PRL_ResourceDirectoryEntry) == 8);
-}
+#ifdef DEBUG
+  static void validate_library() {
+    // If any of these fail, you'll need to rewrite the way this library reads data to get it to work
+    assert(sizeof(PRL_DosHeader) == 64);
+    assert(sizeof(PRL_FileHeader) == 20);
+    assert(sizeof(PRL_OptionalHeader) == 96);
+    assert(sizeof(PRL_OptionalHeader64) == 112);
+    assert(sizeof(PRL_DataDirectory) == 8);
+    assert(sizeof(PRL_SectionHeader) == 40);
+    assert(sizeof(PRL_ResourceDirectoryTable) == 16);
+    assert(sizeof(PRL_ResourceDirectoryEntry) == 8);
+  }
+#endif
 
 PeResourceLoader * PeResourceLoader_Open(const char * file_path) {
-  validate_library();  // if this fails, we cannot map the content of PE file to our structs
+  #ifdef DEBUG
+    validate_library();  // if this fails, we cannot map the content of PE file to our structs
+  #endif
 
   PeResourceLoader * loader = (PeResourceLoader *) calloc(sizeof(PeResourceLoader), 1);
   loader->fd = fopen(file_path, "rb");
