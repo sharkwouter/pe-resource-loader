@@ -54,10 +54,10 @@ int main(int argc, char ** argv) {
       for (uint16_t bi = 0; bi < bitmap_count; bi++) {
         printf("Found bitmap with id %u\n", bitmap_ids[bi]);
         char * file_name = calloc(sizeof(char), 30);
-        snprintf(file_name, 30, "%u_%u.bmp\0", languages[li], bitmap_ids[bi]);
+        snprintf(file_name, 30, "%u_%u.bmp", languages[li], bitmap_ids[bi]);
         FILE * file = fopen(file_name, "wb");
         free(file_name);
-        uint32_t file_size;
+        uint32_t file_size = 0;
         void * data = PeResourceLoader_GetResource(loader, PRL_TYPE_BITMAP, languages[li], bitmap_ids[bi], &file_size);
         printf("File size is %u\n", file_size);
         fwrite(data, 1, file_size, file);

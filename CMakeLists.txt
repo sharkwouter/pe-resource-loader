@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.10)
 
 project(pe_resource_loader)
 
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -pedantic")
+
 add_library(pe_resource_loader src/pe_resource_loader.c src/tm_unicode.h)
 target_include_directories(pe_resource_loader PRIVATE
   include/

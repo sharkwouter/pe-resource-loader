@@ -15,7 +15,7 @@ typedef struct {
 } PeResourceLoader;
 
 PeResourceLoader * PeResourceLoader_Open(const char * file_path);
-PeResourceLoader * PeResourceLoader_Close(PeResourceLoader * loader);
+void PeResourceLoader_Close(PeResourceLoader * loader);
 
 // Possible types
 typedef enum {

@@ -188,7 +188,7 @@ PeResourceLoader * PeResourceLoader_Open(const char * file_path) {
   return loader;
 }
 
-PeResourceLoader * PeResourceLoader_Close(PeResourceLoader * loader) {
+void PeResourceLoader_Close(PeResourceLoader * loader) {
   fclose(loader->fd);
   free(loader);
   loader = NULL;
@@ -365,40 +365,40 @@ uint32_t * PeResourceLoader_GetResourceIds(PeResourceLoader * loader, PRL_Type r
   return resource_ids;
 }
 
-void * PeResourceLoader_ProcessCursorData(PeResourceLoader * loader, void * data, uint32_t * size) {
+void * PeResourceLoader_ProcessCursorData(void * data, uint32_t * size) {
   uint8_t cursor_header[] = {0x00, 0x00, 0x02, 0x00, 0x01, 0x00, 0x20, 0x20, 0x00, 0x00, 0x01, 0x00, 0x02, 0x00, 0xa8, 0x08, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00};
   void * return_data = calloc(sizeof(uint8_t), sizeof(cursor_header) + *size - 4);
   memcpy(return_data, cursor_header, sizeof(cursor_header) * sizeof(uint8_t));
-  memcpy(return_data + (sizeof(cursor_header) * sizeof(uint8_t)), data + 4, *size - 4);
+  memcpy((uint8_t *) return_data + (sizeof(cursor_header) * sizeof(uint8_t)), (uint8_t *) data + 4, *size - 4);
   free(data);
 
   *size = sizeof(cursor_header) * sizeof(uint8_t) + *size - 4;
   return return_data;
 }
 
-void * PeResourceLoader_ProcessIconData(PeResourceLoader * loader, void * data, uint32_t * size) {
+void * PeResourceLoader_ProcessIconData(void * data, uint32_t * size) {
   uint8_t icon_header[] = {0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x20, 0x20, 0x00, 0x00, 0x01, 0x00, 0x08, 0x00, 0xa8, 0x08, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00};
   void * return_data = calloc(sizeof(uint8_t), sizeof(icon_header) + *size);
   memcpy(return_data, icon_header, sizeof(icon_header) * sizeof(uint8_t));
-  memcpy(return_data + (sizeof(icon_header) * sizeof(uint8_t)), data, *size);
+  memcpy((uint8_t *) return_data + (sizeof(icon_header) * sizeof(uint8_t)), data, *size);
   free(data);
 
   *size = sizeof(icon_header) * sizeof(uint8_t) + *size;
   return return_data;
 }
 
-void * PeResourceLoader_ProcessBitmapData(PeResourceLoader * loader, void * data, uint32_t * size) {
+void * PeResourceLoader_ProcessBitmapData(void * data, uint32_t * size) {
   uint8_t bmp_header[] = {0x42, 0x4d, 0x38, 0xf9, 0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x36, 0x00, 0x00, 0x00};
   void * return_data = calloc(sizeof(uint8_t), sizeof(bmp_header) + *size);
   memcpy(return_data, bmp_header, sizeof(bmp_header) * sizeof(uint8_t));
-  memcpy(return_data + (sizeof(bmp_header) * sizeof(uint8_t)), data, *size);
+  memcpy((uint8_t *) return_data + (sizeof(bmp_header) * sizeof(uint8_t)), data, *size);
   free(data);
 
   *size = sizeof(bmp_header) * sizeof(uint8_t) + *size;
   return return_data;
 }
 
-void * PeResourceLoader_ProcessStringData(PeResourceLoader * loader, uint32_t string_id, void * data, uint32_t * size) {
+void * PeResourceLoader_ProcessStringData(uint32_t string_id, void * data, uint32_t * size) {
   if (!data || *size <= 0) {
     *size = 0;
     return NULL;
@@ -407,7 +407,7 @@ void * PeResourceLoader_ProcessStringData(PeResourceLoader * loader, uint32_t st
   uint32_t id = (string_id & 0xFFFFFFFFFFFFFFF0);  // The first id in a list of strings rounds to base 16
 
   void * string = NULL;
-  for(int i = 0; i < (*size / sizeof(uint16_t)); i++) {
+  for(uint32_t i = 0; i < (*size / sizeof(uint16_t)); i++) {
       if (((uint16_t *) data)[i]) {
         if (id == string_id) {
           size_t length = (size_t) ((uint16_t *) data)[i];
@@ -426,19 +426,19 @@ void * PeResourceLoader_ProcessStringData(PeResourceLoader * loader, uint32_t st
   return string;
 }
 
-void * PeResourceLoader_ProcessResourceData(PeResourceLoader * loader, PRL_Type resource_type, void * data, uint32_t * size, uint32_t string_id) {
+void * PeResourceLoader_ProcessResourceData(PRL_Type resource_type, void * data, uint32_t * size, uint32_t string_id) {
   switch (resource_type) {
     case PRL_TYPE_STRING:
-      data = PeResourceLoader_ProcessStringData(loader, string_id, data, size);
+      data = PeResourceLoader_ProcessStringData(string_id, data, size);
       break;
     case PRL_TYPE_BITMAP:
-      data = PeResourceLoader_ProcessBitmapData(loader, data, size);
+      data = PeResourceLoader_ProcessBitmapData(data, size);
       break;
     case PRL_TYPE_ICON:
-      data = PeResourceLoader_ProcessIconData(loader, data, size);
+      data = PeResourceLoader_ProcessIconData(data, size);
       break;
     case PRL_TYPE_CURSOR:
-      data = PeResourceLoader_ProcessCursorData(loader, data, size);
+      data = PeResourceLoader_ProcessCursorData(data, size);
       break;
     default:
       break;
@@ -472,11 +472,11 @@ void * PeResourceLoader_GetResource(PeResourceLoader * loader, PRL_Type resource
   if (size != NULL) {
     *size = data_entry->size;
     free(data_entry);
-    data = PeResourceLoader_ProcessResourceData(loader, resource_type, data, size, string_id);
+    data = PeResourceLoader_ProcessResourceData(resource_type, data, size, string_id);
   } else {
     uint32_t temp_size = data_entry->size;
     free(data_entry);
-    data = PeResourceLoader_ProcessResourceData(loader, resource_type, data, &temp_size, string_id);
+    data = PeResourceLoader_ProcessResourceData(resource_type, data, &temp_size, string_id);
   }
 
   return data;
