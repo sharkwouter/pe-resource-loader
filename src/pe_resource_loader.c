@@ -113,7 +113,7 @@ PeResourceLoader * PeResourceLoader_Open(const char * file_path) {
     // Get DOS header and verify it is a DOS header
     DosHeader dos_header;
     fread(&dos_header, sizeof(DosHeader), 1, loader->fd);
-    if (strncmp(dos_header.magic, EXPECTED_DOS_HEADER_MAGIC, DOS_HEADER_MAGIC_LENGTH) != 0) {
+    if (strncmp((char *) dos_header.magic, EXPECTED_DOS_HEADER_MAGIC, DOS_HEADER_MAGIC_LENGTH) != 0) {
       fclose(loader->fd);
       free(loader);
       return NULL;
@@ -122,8 +122,8 @@ PeResourceLoader * PeResourceLoader_Open(const char * file_path) {
     // Verify NT signature
     uint8_t nt_signature[NT_SIGNATURE_LENGTH];
     fseek(loader->fd, dos_header.nt_header_offset, SEEK_SET);
-    fread(nt_signature, sizeof(uint8_t), NT_SIGNATURE_LENGTH, loader->fd);
-    if(strcmp(nt_signature, EXPECTED_NT_SIGNATURE) != 0) {
+    fread(nt_signature, sizeof(char), NT_SIGNATURE_LENGTH, loader->fd);
+    if(strcmp((char *) nt_signature, EXPECTED_NT_SIGNATURE) != 0) {
       fclose(loader->fd);
       free(loader);
       return NULL;
@@ -171,7 +171,7 @@ PeResourceLoader * PeResourceLoader_Open(const char * file_path) {
     SectionHeader * section_headers = (SectionHeader *) calloc(file_header.number_of_sections, sizeof(SectionHeader));
     fread(section_headers, sizeof(SectionHeader), file_header.number_of_sections, loader->fd);
     for(int i = 0; i < file_header.number_of_sections; i++) {
-      if (strcmp(".rsrc", section_headers[i].name) == 0) {
+      if (strcmp(".rsrc", (char *) section_headers[i].name) == 0) {
         loader->resource_offset = section_headers[i].address;
         loader->resource_virtual_address = section_headers[i].virtual_address;
         break;
