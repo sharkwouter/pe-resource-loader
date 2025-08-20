@@ -280,8 +280,8 @@ void * PeResourceLoader_GetDataEntryData(PeResourceLoader * loader, ResourceData
   return data;
 }
 
-uint8_t * PeResourceLoader_Utf16ToUtf8(void * string_data, size_t * length) {
-  uint8_t * output_string = (uint8_t *) calloc(*length + 1, sizeof(uint8_t));  // +1 for null terminator
+void * PeResourceLoader_Utf16ToUtf8(void * string_data, size_t * length) {
+  void * output_string = calloc(*length + 1, sizeof(char));  // +1 for null terminator
   tmu_conversion_result result = tmu_utf8_convert_from_bytes(
     string_data,
     *length * sizeof(uint16_t),
@@ -296,7 +296,7 @@ uint8_t * PeResourceLoader_Utf16ToUtf8(void * string_data, size_t * length) {
   if (result.ec == TM_ERANGE) {
     // If the utf-8 string is bigger than the utf16 string, retry with the new correct size
     free(output_string);
-    output_string = (uint8_t *) calloc(result.size, sizeof(uint8_t));
+    output_string = calloc(result.size, sizeof(char));
     tmu_utf8_convert_from_bytes(
       string_data,
       *length * sizeof(uint16_t),
@@ -365,9 +365,9 @@ uint32_t * PeResourceLoader_GetResourceIds(PeResourceLoader * loader, PRL_Type r
   return resource_ids;
 }
 
-uint8_t * PeResourceLoader_ProcessCursorData(PeResourceLoader * loader, uint8_t * data, uint32_t * size) {
+void * PeResourceLoader_ProcessCursorData(PeResourceLoader * loader, void * data, uint32_t * size) {
   uint8_t cursor_header[] = {0x00, 0x00, 0x02, 0x00, 0x01, 0x00, 0x20, 0x20, 0x00, 0x00, 0x01, 0x00, 0x02, 0x00, 0xa8, 0x08, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00};
-  uint8_t * return_data = calloc(sizeof(uint8_t), sizeof(cursor_header) + *size - 4);
+  void * return_data = calloc(sizeof(uint8_t), sizeof(cursor_header) + *size - 4);
   memcpy(return_data, cursor_header, sizeof(cursor_header) * sizeof(uint8_t));
   memcpy(return_data + (sizeof(cursor_header) * sizeof(uint8_t)), data + 4, *size - 4);
   free(data);
@@ -376,9 +376,9 @@ uint8_t * PeResourceLoader_ProcessCursorData(PeResourceLoader * loader, uint8_t 
   return return_data;
 }
 
-uint8_t * PeResourceLoader_ProcessIconData(PeResourceLoader * loader, void * data, uint32_t * size) {
+void * PeResourceLoader_ProcessIconData(PeResourceLoader * loader, void * data, uint32_t * size) {
   uint8_t icon_header[] = {0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x20, 0x20, 0x00, 0x00, 0x01, 0x00, 0x08, 0x00, 0xa8, 0x08, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00};
-  uint8_t * return_data = calloc(sizeof(uint8_t), sizeof(icon_header) + *size);
+  void * return_data = calloc(sizeof(uint8_t), sizeof(icon_header) + *size);
   memcpy(return_data, icon_header, sizeof(icon_header) * sizeof(uint8_t));
   memcpy(return_data + (sizeof(icon_header) * sizeof(uint8_t)), data, *size);
   free(data);
@@ -387,9 +387,9 @@ uint8_t * PeResourceLoader_ProcessIconData(PeResourceLoader * loader, void * dat
   return return_data;
 }
 
-uint8_t * PeResourceLoader_ProcessBitmapData(PeResourceLoader * loader, void * data, uint32_t * size) {
+void * PeResourceLoader_ProcessBitmapData(PeResourceLoader * loader, void * data, uint32_t * size) {
   uint8_t bmp_header[] = {0x42, 0x4d, 0x38, 0xf9, 0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x36, 0x00, 0x00, 0x00};
-  uint8_t * return_data = calloc(sizeof(uint8_t), sizeof(bmp_header) + *size);
+  void * return_data = calloc(sizeof(uint8_t), sizeof(bmp_header) + *size);
   memcpy(return_data, bmp_header, sizeof(bmp_header) * sizeof(uint8_t));
   memcpy(return_data + (sizeof(bmp_header) * sizeof(uint8_t)), data, *size);
   free(data);
@@ -398,7 +398,7 @@ uint8_t * PeResourceLoader_ProcessBitmapData(PeResourceLoader * loader, void * d
   return return_data;
 }
 
-uint8_t * PeResourceLoader_ProcessStringData(PeResourceLoader * loader, uint32_t string_id, void * data, uint32_t * size) {
+void * PeResourceLoader_ProcessStringData(PeResourceLoader * loader, uint32_t string_id, void * data, uint32_t * size) {
   if (!data || *size <= 0) {
     *size = 0;
     return NULL;
@@ -406,7 +406,7 @@ uint8_t * PeResourceLoader_ProcessStringData(PeResourceLoader * loader, uint32_t
 
   uint32_t id = (string_id & 0xFFFFFFFFFFFFFFF0);  // The first id in a list of strings rounds to base 16
 
-  uint8_t * string = NULL;
+  void * string = NULL;
   for(int i = 0; i < (*size / sizeof(uint16_t)); i++) {
       if (((uint16_t *) data)[i]) {
         if (id == string_id) {
@@ -426,7 +426,7 @@ uint8_t * PeResourceLoader_ProcessStringData(PeResourceLoader * loader, uint32_t
   return string;
 }
 
-uint8_t * PeResourceLoader_ProcessResourceData(PeResourceLoader * loader, PRL_Type resource_type, void * data, uint32_t * size, uint32_t string_id) {
+void * PeResourceLoader_ProcessResourceData(PeResourceLoader * loader, PRL_Type resource_type, void * data, uint32_t * size, uint32_t string_id) {
   switch (resource_type) {
     case PRL_TYPE_STRING:
       data = PeResourceLoader_ProcessStringData(loader, string_id, data, size);
@@ -447,7 +447,7 @@ uint8_t * PeResourceLoader_ProcessResourceData(PeResourceLoader * loader, PRL_Ty
 }
 
 
-uint8_t * PeResourceLoader_GetResource(PeResourceLoader * loader, PRL_Type resource_type, uint32_t language_id, uint32_t resource_id, uint32_t * size) {
+void * PeResourceLoader_GetResource(PeResourceLoader * loader, PRL_Type resource_type, uint32_t language_id, uint32_t resource_id, uint32_t * size) {
   if (size != NULL) {
     *size = 0;
   }

@@ -23,7 +23,7 @@ int main(int argc, char ** argv) {
   }
 
   // In this example we load string 107 in US English and we don't save the length
-  uint8_t * string = PeResourceLoader_GetResource(loader, PRL_TYPE_STRING, PRL_LANG_EN_US, 107, NULL);
+  char * string = (char *) PeResourceLoader_GetResource(loader, PRL_TYPE_STRING, PRL_LANG_EN_US, 107, NULL);
   if (!string) {
     printf("Could not find string 107\n");
     return 2;

@@ -45,9 +45,9 @@ int main(int argc, char ** argv) {
       FILE * file = fopen(file_name, "wb");
       free(file_name);
       uint32_t file_size;
-      uint8_t * data = PeResourceLoader_GetResource(loader, PRL_TYPE_BITMAP, languages[li], bitmap_ids[bi], &file_size);
+      void * data = PeResourceLoader_GetResource(loader, PRL_TYPE_BITMAP, languages[li], bitmap_ids[bi], &file_size);
       printf("File size is %u\n", file_size);
-      fwrite(data, sizeof(uint8_t), file_size, file);
+      fwrite(data, 1, file_size, file);
       fclose(file);
       free(data);
     }

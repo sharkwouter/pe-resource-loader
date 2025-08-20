@@ -33,7 +33,7 @@ int main(int argc, char ** argv) {
     printf("Strings for language with id %u:\n", languages[li]);
     for (uint16_t si = 0; si < string_count; si++) {
       uint32_t length = 0;
-      uint8_t * string = PeResourceLoader_GetResource(loader, PRL_TYPE_STRING, languages[li], string_ids[si], &length);
+      char * string = (char *) PeResourceLoader_GetResource(loader, PRL_TYPE_STRING, languages[li], string_ids[si], &length);
       if (string) {
         printf("%u: %s\n", string_ids[si], string);
       }

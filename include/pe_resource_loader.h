@@ -43,7 +43,7 @@ typedef enum {
 
 uint32_t * PeResourceLoader_GetLanguageIds(PeResourceLoader * loader, uint16_t * language_count);
 uint32_t * PeResourceLoader_GetResourceIds(PeResourceLoader *loader, PRL_Type resource_type, uint32_t * string_count);
-uint8_t * PeResourceLoader_GetResource(PeResourceLoader * loader, PRL_Type resource_type, uint32_t language_id, uint32_t string_id, uint32_t * size);
+void * PeResourceLoader_GetResource(PeResourceLoader * loader, PRL_Type resource_type, uint32_t language_id, uint32_t string_id, uint32_t * size);
 
 // Possible languages
 typedef enum {
