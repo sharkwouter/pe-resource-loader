@@ -16,7 +16,7 @@ Here is a basic example of how the PE Resource Loader library can be used in a p
 
 int main(int argc, char ** argv) {
   // Load your dll or exe file from which you want to extract strings
-  PeResourceLoader  * loader = PeResourceLoader_Open("strings.dll");
+  PeResourceLoader * loader = PeResourceLoader_Open("strings.dll");
   if (!loader) {
     printf("PE file failed to load\n");
     return 1;
@@ -40,7 +40,7 @@ int main(int argc, char ** argv) {
 }
 ```
 
-Make sure to link your code to `pe_resource_loader`. The code for the bundled pe_string_loader program contains another more complex example.
+Make sure to link your code to `pe_resource_loader`. The code for the bundled pe_string_loader and pe_bitmap_loader programs contain another more complex examples.
 
 ## Using PE String Loader Program
 
