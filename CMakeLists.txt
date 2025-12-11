@@ -59,8 +59,9 @@ if(PE_BITMAP_LOADER AND (BUILD_SHARED_LIBS OR BUILD_STATIC_LIBS))
   endif()
 endif(PE_BITMAP_LOADER AND (BUILD_SHARED_LIBS OR BUILD_STATIC_LIBS))
 
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/libpe-resource-loader.pc.in"
-  "${CMAKE_CURRENT_BINARY_DIR}/lib/pkgconfig/libpe-resource-loader.pc" @ONLY)
+include(GNUInstallDirs)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/pe-resource-loader.pc.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/lib/pkgconfig/pe-resource-loader.pc" @ONLY)
 
 if (NOT WIN32)
   if(BUILD_SHARED_LIBS)
@@ -71,7 +72,7 @@ if (NOT WIN32)
   endif(BUILD_STATIC_LIBS)
   install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/pe_resource_loader.h DESTINATION include/)
   install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt DESTINATION share/licenses/pe_resource_loader/)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/lib/pkgconfig/libpe-resource-loader.pc DESTINATION lib/pkgconfig/)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/lib/pkgconfig/pe-resource-loader.pc DESTINATION lib/pkgconfig/)
 
   if(PE_STRING_LOADER)
     install(TARGETS pe_string_loader DESTINATION bin)
