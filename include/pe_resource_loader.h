@@ -1,6 +1,14 @@
 #ifndef PE_RESOURCE_LOADER_HPP
 #define PE_RESOURCE_LOADER_HPP
 
+/** @file pe_resource_loader.h
+ * 
+ */
+
+/** @defgroup Blah
+ *
+ */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -14,7 +22,24 @@ typedef struct {
   uint32_t resource_offset;
 } PeResourceLoader;
 
+/**
+  * Open a PE file for retrieving resources
+  *
+  * This should be done first.
+  *
+  * @param file_path - Path to the PE file (can be an exe or dll file)
+  * @return PeResourceLoader struct pointer
+**/
 PeResourceLoader * PeResourceLoader_Open(const char * file_path);
+
+/**
+  * Close a PE file
+  *
+  * This specifically closes the PeResourceLoader struct pointer created by PeResourceLoader_Open.
+  * This always be used after the PeResourceLoader struct is no longer needed.
+  *
+  * @param loader - PeResourceLoader struct pointer
+**/
 void PeResourceLoader_Close(PeResourceLoader * loader);
 
 // Possible types
@@ -41,8 +66,21 @@ typedef enum {
   PRL_TYPE_MANIFEST=24
 } PRL_Type;
 
+/**
+  * Get list of language IDs found in PE file
+  *
+  * This should be done first.
+  *
+  * @param loader - PeResourceLoader struct pointer created by PeResourceLoader_Open
+  * @param language_count - Path to the PE file (can be an exe or dll file)
+  * @return PeResourceLoader struct pointer
+**/
 uint32_t * PeResourceLoader_GetLanguageIds(PeResourceLoader * loader, uint16_t * language_count);
+
+
 uint32_t * PeResourceLoader_GetResourceIds(PeResourceLoader *loader, PRL_Type resource_type, uint32_t * string_count);
+
+
 void * PeResourceLoader_GetResource(PeResourceLoader * loader, PRL_Type resource_type, uint32_t language_id, uint32_t string_id, uint32_t * size);
 
 // Possible languages
