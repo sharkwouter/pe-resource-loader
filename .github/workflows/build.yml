@@ -89,3 +89,25 @@ jobs:
             pe-resource-loader/include
             pe-resource-loader/LICENSE.txt
             pe-resource-loader/README.md
+
+  Release:
+    needs: [Ubuntu, MacOS, Windows]
+    if: ${{ github.ref_type == 'tag' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        build: [ubuntu, macos, windows]
+    steps:
+    - uses: actions/download-artifact@v3
+    - name: Zip artifacts
+      run: |
+        zip -r pe-resource-loader-${{matrix.build}}.zip pe-resource-loader-${{matrix.build}}
+    - name: Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: pe-resource-loader-${{matrix.build}}.zip
+        prerelease: true
+        name: pe-resource-loader ${{ github.ref_name }}
+        tag_name: ${{ github.ref_name }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
