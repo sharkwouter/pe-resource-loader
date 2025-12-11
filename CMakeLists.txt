@@ -7,6 +7,14 @@ set(CMAKE_CXX_FLAGS_DEBUG "-DDEBUG=1")
 
 set(SOURCES src/pe_resource_loader.c;src/tm_unicode.h)
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin/")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib/")
+if(WIN32)
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin/")
+else()
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib/")
+endif()
+
 option(BUILD_SHARED_LIBS "Build shared library." ON)
 if(BUILD_SHARED_LIBS)
   add_library(pe_resource_loader_shared SHARED ${SOURCES})

@@ -19,16 +19,15 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=Release ..
           cmake --build .
           strip --strip-unneeded pe_string_loader pe_bitmap_loader libpe_resource_loader.a
-          cp ../LICENSE.txt ../README.md ./
+          cp -r ../LICENSE.txt ../README.md ../include ./
       - name: Publish artifacts
         uses: actions/upload-artifact@v4
         with:
           name: pe-resource-loader-linux
           path: |
-            pe-resource-loader/pe_string_loader
-            pe-resource-loader/pe_bitmap_loader
-            pe-resource-loader/libpe_resource_loader.a
-            pe-resource-loader/libpe_resource_loader.so
+            pe-resource-loader/bin
+            pe-resource-loader/lib
+            pe-resource-loader/include
             pe-resource-loader/LICENSE.txt
             pe-resource-loader/README.md
 
@@ -43,16 +42,15 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=Release ..
           cmake --build .
           strip pe_string_loader pe_bitmap_loader libpe_resource_loader.a
-          cp ../LICENSE.txt ../README.md ./
+          cp -r ../LICENSE.txt ../README.md ../include ./
       - name: Publish artifacts
         uses: actions/upload-artifact@v4
         with:
           name: pe-resource-loader-macos
           path: |
-            pe-resource-loader/pe_string_loader
-            pe-resource-loader/pe_bitmap_loader
-            pe-resource-loader/libpe_resource_loader.a
-            pe-resource-loader/libpe_resource_loader.so
+            pe-resource-loader/bin
+            pe-resource-loader/lib
+            pe-resource-loader/include
             pe-resource-loader/LICENSE.txt
             pe-resource-loader/README.md
 
@@ -80,15 +78,14 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=Release ..
           cmake --build .
           strip --strip-unneeded pe_string_loader.exe pe_bitmap_loader.exe libpe_resource_loader.a
-          cp ../LICENSE.txt ../README.md ./
+          cp -r ../LICENSE.txt ../README.md ../include ./
       - name: Publish artifacts
         uses: actions/upload-artifact@v4
         with:
           name: pe-resource-loader-windows
           path: |
-            pe-resource-loader/pe_string_loader.exe
-            pe-resource-loader/pe_bitmap_loader.exe
-            pe-resource-loader/libpe_resource_loader.a
-            pe-resource-loader/libpe_resource_loader.dll
+            pe-resource-loader/bin
+            pe-resource-loader/lib
+            pe-resource-loader/include
             pe-resource-loader/LICENSE.txt
             pe-resource-loader/README.md
