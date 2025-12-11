@@ -53,7 +53,7 @@ int main(int argc, char ** argv) {
       printf("Language with id %u:\n", languages[li]);
       for (uint16_t bi = 0; bi < bitmap_count; bi++) {
         printf("Found bitmap with id %u\n", bitmap_ids[bi]);
-        char * file_name = calloc(sizeof(char), 34);
+        char * file_name = calloc(34, sizeof(char));
         snprintf(file_name, 34, "%i_%u_%u.bmp", i, languages[li], bitmap_ids[bi]);
         FILE * file = fopen(file_name, "wb");
         free(file_name);
