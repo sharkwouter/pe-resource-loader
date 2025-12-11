@@ -1,0 +1,92 @@
+name: Build
+
+on:
+  push:
+
+jobs:
+  Ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build
+        run: |
+          mkdir pe-resource-loader && cd pe-resource-loader
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          cmake --build .
+          strip --strip-unneeded pe_string_loader pe_bitmap_loader libpe_resource_loader.a
+          cp ../LICENSE.txt ../README.md ./
+      - name: Publish artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pe-resource-loader-linux
+          path: |
+            pe-resource-loader/pe_string_loader
+            pe-resource-loader/pe_bitmap_loader
+            pe-resource-loader/libpe_resource_loader.a
+            pe-resource-loader/LICENSE.txt
+            pe-resource-loader/README.md
+
+  MacOS:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build
+        run: |
+          mkdir pe-resource-loader && cd pe-resource-loader
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          cmake --build .
+          strip --strip-unneeded pe_string_loader pe_bitmap_loader libpe_resource_loader.a
+          cp ../LICENSE.txt ../README.md ./
+      - name: Publish artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pe-resource-loader-macos
+          path: |
+            pe-resource-loader/pe_string_loader
+            pe-resource-loader/pe_bitmap_loader
+            pe-resource-loader/libpe_resource_loader.a
+            pe-resource-loader/LICENSE.txt
+            pe-resource-loader/README.md
+
+  Windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - name: Install dependencies
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-binutils
+            mingw-w64-x86_64-make
+            mingw-w64-x86_64-cmake
+          update: true
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build
+        run: |
+          mkdir pe-resource-loader && cd pe-resource-loader
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          cmake --build .
+          strip --strip-unneeded pe_string_loader.exe pe_bitmap_loader.exe libpe_resource_loader.dll
+          ldd pe_string_loader.exe | grep /mingw64 | awk '{print $3}' | xargs -i cp {} .
+          cp ../LICENSE.txt ../README.md ./
+      - name: Publish artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pe-resource-loader-windows
+          path: |
+            pe-resource-loader/pe_string_loader.exe
+            pe-resource-loader/pe_bitmap_loader.exe
+            pe-resource-loader/libpe_resource_loader.dll
+            pe-resource-loader/LICENSE.txt
+            pe-resource-loader/README.md
