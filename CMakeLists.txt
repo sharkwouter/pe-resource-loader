@@ -1,18 +1,18 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(pe_resource_loader)
+project(pe_resource_loader VERSION 1.0.0)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -pedantic")
 set(CMAKE_CXX_FLAGS_DEBUG "-DDEBUG=1")
 
 set(SOURCES src/pe_resource_loader.c;src/tm_unicode.h)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin/")
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib/")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin/")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/lib/")
 if(WIN32)
-  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin/")
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin/")
 else()
-  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib/")
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/lib/")
 endif()
 
 option(BUILD_SHARED_LIBS "Build shared library." ON)
@@ -59,6 +59,9 @@ if(PE_BITMAP_LOADER AND (BUILD_SHARED_LIBS OR BUILD_STATIC_LIBS))
   endif()
 endif(PE_BITMAP_LOADER AND (BUILD_SHARED_LIBS OR BUILD_STATIC_LIBS))
 
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/libpe-resource-loader.pc.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/lib/pkgconfig/libpe-resource-loader.pc" @ONLY)
+
 if (NOT WIN32)
   if(BUILD_SHARED_LIBS)
     install(TARGETS pe_resource_loader_shared DESTINATION lib)
@@ -68,6 +71,7 @@ if (NOT WIN32)
   endif(BUILD_STATIC_LIBS)
   install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/pe_resource_loader.h DESTINATION include/)
   install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt DESTINATION share/licenses/pe_resource_loader/)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/lib/pkgconfig/libpe-resource-loader.pc DESTINATION lib/pkgconfig/)
 
   if(PE_STRING_LOADER)
     install(TARGETS pe_string_loader DESTINATION bin)
