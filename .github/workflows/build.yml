@@ -28,6 +28,7 @@ jobs:
             pe-resource-loader/pe_string_loader
             pe-resource-loader/pe_bitmap_loader
             pe-resource-loader/libpe_resource_loader.a
+            pe-resource-loader/libpe_resource_loader.so
             pe-resource-loader/LICENSE.txt
             pe-resource-loader/README.md
 
@@ -51,6 +52,7 @@ jobs:
             pe-resource-loader/pe_string_loader
             pe-resource-loader/pe_bitmap_loader
             pe-resource-loader/libpe_resource_loader.a
+            pe-resource-loader/libpe_resource_loader.so
             pe-resource-loader/LICENSE.txt
             pe-resource-loader/README.md
 
@@ -87,5 +89,6 @@ jobs:
             pe-resource-loader/pe_string_loader.exe
             pe-resource-loader/pe_bitmap_loader.exe
             pe-resource-loader/libpe_resource_loader.a
+            pe-resource-loader/libpe_resource_loader.dll
             pe-resource-loader/LICENSE.txt
             pe-resource-loader/README.md

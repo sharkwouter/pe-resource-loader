@@ -5,31 +5,59 @@ project(pe_resource_loader)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -pedantic")
 set(CMAKE_CXX_FLAGS_DEBUG "-DDEBUG=1")
 
-add_library(pe_resource_loader src/pe_resource_loader.c src/tm_unicode.h)
-target_include_directories(pe_resource_loader PRIVATE
-  include/
-)
+set(SOURCES src/pe_resource_loader.c;src/tm_unicode.h)
+
+option(BUILD_SHARED_LIBS "Build shared library." ON)
+if(BUILD_SHARED_LIBS)
+  add_library(pe_resource_loader_shared SHARED ${SOURCES})
+  set_target_properties(pe_resource_loader_shared PROPERTIES OUTPUT_NAME pe_resource_loader)
+  target_include_directories(pe_resource_loader_shared PRIVATE
+    include/
+  )
+endif(BUILD_SHARED_LIBS)
+
+option(BUILD_STATIC_LIBS "Build static library." ON)
+if(BUILD_STATIC_LIBS)
+  add_library(pe_resource_loader_static STATIC ${SOURCES})
+  set_target_properties(pe_resource_loader_static PROPERTIES OUTPUT_NAME pe_resource_loader)
+  target_include_directories(pe_resource_loader_static PRIVATE
+    include/
+  )
+endif(BUILD_STATIC_LIBS)
 
 option(PE_STRING_LOADER "If the pe_string_loader program should be build as well" ON)
-if(PE_STRING_LOADER)
+if(PE_STRING_LOADER AND (BUILD_SHARED_LIBS OR BUILD_STATIC_LIBS))
   add_executable(pe_string_loader pe_string_loader/main.c)
   target_include_directories(pe_string_loader PRIVATE
     include/
   )
-  target_link_libraries(pe_string_loader pe_resource_loader)
-endif(PE_STRING_LOADER)
+  if(BUILD_STATIC_LIBS)
+    target_link_libraries(pe_string_loader pe_resource_loader_static)
+  elseif(BUILD_SHARED_LIBS)
+    target_link_libraries(pe_string_loader pe_resource_loader_shared)
+  endif()
+endif(PE_STRING_LOADER AND (BUILD_SHARED_LIBS OR BUILD_STATIC_LIBS))
 
 option(PE_BITMAP_LOADER "If the pe_bitmap_loader program should be build as well" ON)
-if(PE_BITMAP_LOADER)
+if(PE_BITMAP_LOADER AND (BUILD_SHARED_LIBS OR BUILD_STATIC_LIBS))
   add_executable(pe_bitmap_loader pe_bitmap_loader/main.c pe_bitmap_loader/stb_image_write.h)
   target_include_directories(pe_bitmap_loader PRIVATE
     include/
   )
-  target_link_libraries(pe_bitmap_loader pe_resource_loader)
-endif(PE_BITMAP_LOADER)
+  if(BUILD_STATIC_LIBS)
+    target_link_libraries(pe_bitmap_loader pe_resource_loader_static)
+  elseif(BUILD_SHARED_LIBS)
+    target_link_libraries(pe_bitmap_loader pe_resource_loader_shared)
+  endif()
+endif(PE_BITMAP_LOADER AND (BUILD_SHARED_LIBS OR BUILD_STATIC_LIBS))
 
 if (NOT WIN32)
-  install(TARGETS pe_resource_loader DESTINATION lib)
+  if(BUILD_SHARED_LIBS)
+    install(TARGETS pe_resource_loader_shared DESTINATION lib)
+  endif(BUILD_SHARED_LIBS)
+  if(BUILD_STATIC_LIBS)
+    install(TARGETS pe_resource_loader_static DESTINATION lib)
+  endif(BUILD_STATIC_LIBS)
   install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/pe_resource_loader.h DESTINATION include/)
   install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt DESTINATION share/licenses/pe_resource_loader/)
 
