@@ -23,7 +23,7 @@ jobs:
       - name: Publish artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: pe-resource-loader-linux
+          name: pe-resource-loader-ubuntu
           path: |
             pe-resource-loader/bin
             pe-resource-loader/lib
