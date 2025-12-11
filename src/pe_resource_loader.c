@@ -109,7 +109,7 @@ PeResourceLoader * PeResourceLoader_Open(const char * file_path) {
     validate_library();  // if this fails, we cannot map the content of PE file to our structs
   #endif
 
-  PeResourceLoader * loader = (PeResourceLoader *) calloc(sizeof(PeResourceLoader), 1);
+  PeResourceLoader * loader = (PeResourceLoader *) calloc(1, sizeof(PeResourceLoader));
   loader->fd = fopen(file_path, "rb");
   if (loader->fd == NULL) {
     free(loader);
@@ -265,7 +265,7 @@ PE_ResourceDataEntry * PeResourceLoader_GetDataEntry(PeResourceLoader * loader, 
   }
 
   // Need to read a resource data entry
-  PE_ResourceDataEntry * data_entry = calloc(sizeof(PE_ResourceDataEntry), 1);
+  PE_ResourceDataEntry * data_entry = calloc(1, sizeof(PE_ResourceDataEntry));
   fseek(loader->fd, loader->resource_offset + (rt_language_entry->data_or_subdirectory_offset & 0x7FFFFFFF), SEEK_SET);
   fread(data_entry, sizeof(PE_ResourceDataEntry), 1, loader->fd);
   free(rt_language_entry);
@@ -359,7 +359,7 @@ uint32_t * PeResourceLoader_GetResourceIds(PeResourceLoader * loader, PRL_Type r
   if (resource_type == PRL_TYPE_STRING) {
     *count = *count * 16;
   }
-  uint32_t * resource_ids = (uint32_t *) calloc(sizeof(uint32_t), *count);
+  uint32_t * resource_ids = (uint32_t *) calloc(*count, sizeof(uint32_t));
   for(uint16_t i = 0; i < *count; i++) {
     if (resource_type == PRL_TYPE_STRING) {
       resource_ids[i] = (directories[i / 16].name_offset_or_id - 1) * 16 + (i % 16);
@@ -374,7 +374,7 @@ uint32_t * PeResourceLoader_GetResourceIds(PeResourceLoader * loader, PRL_Type r
 
 void * PeResourceLoader_ProcessCursorData(void * data, uint32_t * size) {
   uint8_t cursor_header[] = {0x00, 0x00, 0x02, 0x00, 0x01, 0x00, 0x20, 0x20, 0x00, 0x00, 0x01, 0x00, 0x02, 0x00, 0xa8, 0x08, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00};
-  void * return_data = calloc(sizeof(uint8_t), sizeof(cursor_header) + *size - 4);
+  void * return_data = calloc(sizeof(cursor_header) + *size - 4, sizeof(uint8_t));
   memcpy(return_data, cursor_header, sizeof(cursor_header) * sizeof(uint8_t));
   memcpy((uint8_t *) return_data + (sizeof(cursor_header) * sizeof(uint8_t)), (uint8_t *) data + 4, *size - 4);
   free(data);
@@ -385,7 +385,7 @@ void * PeResourceLoader_ProcessCursorData(void * data, uint32_t * size) {
 
 void * PeResourceLoader_ProcessIconData(void * data, uint32_t * size) {
   uint8_t icon_header[] = {0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x20, 0x20, 0x00, 0x00, 0x01, 0x00, 0x08, 0x00, 0xa8, 0x08, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00};
-  void * return_data = calloc(sizeof(uint8_t), sizeof(icon_header) + *size);
+  void * return_data = calloc(sizeof(icon_header) + *size, sizeof(uint8_t));
   memcpy(return_data, icon_header, sizeof(icon_header) * sizeof(uint8_t));
   memcpy((uint8_t *) return_data + (sizeof(icon_header) * sizeof(uint8_t)), data, *size);
   free(data);
@@ -396,7 +396,7 @@ void * PeResourceLoader_ProcessIconData(void * data, uint32_t * size) {
 
 void * PeResourceLoader_ProcessBitmapData(void * data, uint32_t * size) {
   uint8_t bmp_header[] = {0x42, 0x4d, 0x38, 0xf9, 0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x36, 0x00, 0x00, 0x00};
-  void * return_data = calloc(sizeof(uint8_t), sizeof(bmp_header) + *size);
+  void * return_data = calloc(sizeof(bmp_header) + *size, sizeof(uint8_t));
   memcpy(return_data, bmp_header, sizeof(bmp_header) * sizeof(uint8_t));
   memcpy((uint8_t *) return_data + (sizeof(bmp_header) * sizeof(uint8_t)), data, *size);
   free(data);
