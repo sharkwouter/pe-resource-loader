@@ -18,7 +18,7 @@ jobs:
           mkdir pe-resource-loader && cd pe-resource-loader
           cmake -DCMAKE_BUILD_TYPE=Release ..
           cmake --build .
-          strip --strip-unneeded pe_string_loader pe_bitmap_loader libpe_resource_loader.a
+          strip --strip-unneeded bin/pe_string_loader bin/pe_bitmap_loader lib/libpe_resource_loader.a lib/libpe_resource_loader.so
           cp -r ../LICENSE.txt ../README.md ../include ./
       - name: Publish artifacts
         uses: actions/upload-artifact@v4
@@ -41,7 +41,7 @@ jobs:
           mkdir pe-resource-loader && cd pe-resource-loader
           cmake -DCMAKE_BUILD_TYPE=Release ..
           cmake --build .
-          strip pe_string_loader pe_bitmap_loader libpe_resource_loader.a
+          strip bin/pe_string_loader bin/pe_bitmap_loader lib/libpe_resource_loader.a lib/libpe_resource_loader.so
           cp -r ../LICENSE.txt ../README.md ../include ./
       - name: Publish artifacts
         uses: actions/upload-artifact@v4
@@ -77,7 +77,7 @@ jobs:
           mkdir pe-resource-loader && cd pe-resource-loader
           cmake -DCMAKE_BUILD_TYPE=Release ..
           cmake --build .
-          strip --strip-unneeded pe_string_loader.exe pe_bitmap_loader.exe libpe_resource_loader.a
+          strip --strip-unneeded bin/pe_string_loader.exe bin/pe_bitmap_loader.exe lib/libpe_resource_loader.a lib/libpe_resource_loader.dll
           cp -r ../LICENSE.txt ../README.md ../include ./
       - name: Publish artifacts
         uses: actions/upload-artifact@v4
