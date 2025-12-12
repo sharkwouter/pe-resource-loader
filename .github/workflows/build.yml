@@ -103,7 +103,7 @@ jobs:
       run: |
         zip -r pe-resource-loader-${{matrix.build}}.zip pe-resource-loader-${{matrix.build}}
     - name: Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         files: pe-resource-loader-${{matrix.build}}.zip
         prerelease: true

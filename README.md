@@ -4,6 +4,8 @@ Allow you to load resources from Windows exe and dll files even outside of Windo
 
 Currently PE Resource Loader requires GCC and only works on little-endian systems.
 
+[Download here](https://github.com/sharkwouter/pe-resource-loader/releases/latest)!
+
 ## Using the PE Resource Loader Library
 
 Here is a basic example of how the PE Resource Loader library can be used in a program to extract a specific string from a DLL file:
