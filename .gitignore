@@ -4,3 +4,4 @@ build/
 a.out
 output.txt
 .vscode/
+dist/
