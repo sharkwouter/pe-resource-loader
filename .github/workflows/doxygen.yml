@@ -2,8 +2,6 @@ name: Doxygen
 
 on:
   push:
-    branches:
-      - main
 
 permissions:
   contents: read
@@ -16,12 +14,33 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Doxygen documentation generation
-      uses: mattnotmitt/doxygen-action@v1
-    - name: Deploy
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./dist/html
-        force_orphan: true
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y doxygen
+      - name: Create repo files
+        run: |
+          doxygen ./Doxyfile
+          cd dist/html
+          tar -cvf ../../pages.tar ./*
+      - name: Upload repo artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: github-pages
+          path: pages.tar
+
+  publish_repo:
+    if: contains(github.ref,'refs/heads/main')
+    needs: [build]
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
