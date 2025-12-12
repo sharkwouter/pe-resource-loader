@@ -1,14 +1,6 @@
 #ifndef PE_RESOURCE_LOADER_HPP
 #define PE_RESOURCE_LOADER_HPP
 
-/** @file pe_resource_loader.h
- * 
- */
-
-/** @defgroup Blah
- *
- */
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -16,6 +8,12 @@ extern "C" {
 #include <stdint.h>
 #include <stdio.h>
 
+/**
+ * @brief Struct with internal data of pe-resource-loader.
+ *
+ * This struct does not need to be modified. It contains offsets for resources and the virtual offset for following references in the PE file.
+ *
+ */
 typedef struct {
   FILE *  fd;
   uint32_t resource_virtual_address;
@@ -23,26 +21,32 @@ typedef struct {
 } PeResourceLoader;
 
 /**
-  * Open a PE file for retrieving resources
-  *
-  * This should be done first.
-  *
-  * @param file_path - Path to the PE file (can be an exe or dll file)
-  * @return PeResourceLoader struct pointer
-**/
+ * @brief Open a PE file for retrieving resources.
+ *
+ * When using pe-resource-loader this function should be used first.
+ * It will give the PeResourceLoader struct pointer that is required for all other functions.
+ *
+ * @param file_path Path to the PE file (can be an exe or dll file).
+ * @return PeResourceLoader struct pointer.
+ */
 PeResourceLoader * PeResourceLoader_Open(const char * file_path);
 
 /**
-  * Close a PE file
-  *
-  * This specifically closes the PeResourceLoader struct pointer created by PeResourceLoader_Open.
-  * This always be used after the PeResourceLoader struct is no longer needed.
-  *
-  * @param loader - PeResourceLoader struct pointer
-**/
+ * @brief Close a PE file.
+ *
+ * This specifically closes the PeResourceLoader struct pointer created by PeResourceLoader_Open.
+ * This always be used after the PeResourceLoader struct is no longer needed.
+ *
+ * @param loader PeResourceLoader struct pointer.
+ */
 void PeResourceLoader_Close(PeResourceLoader * loader);
 
-// Possible types
+/**
+ * @brief Type of resource that should be received.
+ *
+ * Not all resource types are supported yet, but most are.
+ * Let me know if you need to be able to access a resource type an ID that is not in this list.
+ */
 typedef enum {
   PRL_TYPE_CURSOR=1,
   PRL_TYPE_BITMAP=2,
@@ -67,23 +71,46 @@ typedef enum {
 } PRL_Type;
 
 /**
-  * Get list of language IDs found in PE file
-  *
-  * This should be done first.
-  *
-  * @param loader - PeResourceLoader struct pointer created by PeResourceLoader_Open
-  * @param language_count - Path to the PE file (can be an exe or dll file)
-  * @return PeResourceLoader struct pointer
-**/
+ * @brief Get list of language IDs found in PE file.
+ *
+ * To be able to get the list of resources, the language IDs supported by this application have received using this function.
+ *
+ * @param loader PeResourceLoader struct pointer created by PeResourceLoader_Open.
+ * @param language_count Will contain the size of the returned array if not NULL.
+ * @return uint32_t * an array of language IDs with resources in the PE file.
+ */
 uint32_t * PeResourceLoader_GetLanguageIds(PeResourceLoader * loader, uint16_t * language_count);
 
+/**
+ * @brief Get all resource IDs in the PE file.
+ *
+ * @param loader PeResourceLoader struct pointer created by PeResourceLoader_Open.
+ * @param resource_type The type of resource of which IDs should be returned.
+ * @param count Will contain the size of returned array not NULL.
+ * @return An array of resource IDs.
+ */
+uint32_t * PeResourceLoader_GetResourceIds(PeResourceLoader *loader, PRL_Type resource_type, uint32_t * count);
 
-uint32_t * PeResourceLoader_GetResourceIds(PeResourceLoader *loader, PRL_Type resource_type, uint32_t * string_count);
+/**
+ * @brief Retrieve a resource from a PE file.
+ *
+ * Headers will automatically be added to bitmaps, icons and cursors, making it possible to write them to disk as is.
+ * Strings will be automatically converted to UTF-8.
+ * Other types of resources will be returned as is.
+ *
+ * @param loader PeResourceLoader struct pointer created by PeResourceLoader_Open.
+ * @param resource_type The type of resource that is retrieved.
+ * @param language_id The ID of the language the resource should be returned in.
+ * @param resource_id The ID of the resource that should be returned.
+ * @param size Will contain the size of the resource retrieved.
+ * @return The data contained in the resource as void pointer.
+ */
+void * PeResourceLoader_GetResource(PeResourceLoader * loader, PRL_Type resource_type, uint32_t language_id, uint32_t resource_id, uint32_t * size);
 
-
-void * PeResourceLoader_GetResource(PeResourceLoader * loader, PRL_Type resource_type, uint32_t language_id, uint32_t string_id, uint32_t * size);
-
-// Possible languages
+/**
+ * @brief Language IDs found in PE files.
+ *
+ */
 typedef enum {
   PRL_LANG_AF=0x0036,
   PRL_LANG_AF_ZA=0x0436,
