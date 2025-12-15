@@ -4,7 +4,11 @@ Allow you to load resources from Windows exe and dll files even outside of Windo
 
 Currently PE Resource Loader requires GCC and only works on little-endian systems.
 
-[Download here](https://github.com/sharkwouter/pe-resource-loader/releases/latest)!
+Download:
+- [Windows (x86_64)](https://github.com/sharkwouter/pe-resource-loader/releases/latest/download/pe-resource-loader-windows.zip)
+- [MacOS (arm64)](https://github.com/sharkwouter/pe-resource-loader/releases/latest/download/pe-resource-loader-macos.zip)
+- [Ubuntu (x86_64)](https://github.com/sharkwouter/pe-resource-loader/releases/latest/download/pe-resource-loader-ubuntu.zip)
+- [Source](https://github.com/sharkwouter/pe-resource-loader/tags)
 
 ## Using the PE Resource Loader Library
 
