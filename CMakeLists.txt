@@ -5,7 +5,7 @@ project(pe_resource_loader VERSION 1.0.0)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -pedantic")
 set(CMAKE_CXX_FLAGS_DEBUG "-DDEBUG=1")
 
-set(SOURCES src/pe_resource_loader.c;src/tm_unicode.h)
+set(SOURCES src/pe_resource_loader.c;include/pe_resource_loader.h;src/tm_unicode.h)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin/")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/lib/")
@@ -18,9 +18,10 @@ endif()
 option(BUILD_SHARED_LIBS "Build shared library." ON)
 if(BUILD_SHARED_LIBS)
   add_library(pe_resource_loader_shared SHARED ${SOURCES})
-  set_target_properties(pe_resource_loader_shared PROPERTIES OUTPUT_NAME pe_resource_loader)
-  target_include_directories(pe_resource_loader_shared PRIVATE
-    include/
+  set_target_properties(pe_resource_loader_shared PROPERTIES OUTPUT_NAME pe_resource_loader POSITION_INDEPENDENT_CODE TRUE)
+  target_include_directories(pe_resource_loader_shared PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   )
 endif(BUILD_SHARED_LIBS)
 
@@ -28,8 +29,9 @@ option(BUILD_STATIC_LIBS "Build static library." ON)
 if(BUILD_STATIC_LIBS)
   add_library(pe_resource_loader_static STATIC ${SOURCES})
   set_target_properties(pe_resource_loader_static PROPERTIES OUTPUT_NAME pe_resource_loader)
-  target_include_directories(pe_resource_loader_static PRIVATE
-    include/
+  target_include_directories(pe_resource_loader_static PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   )
 endif(BUILD_STATIC_LIBS)
 
