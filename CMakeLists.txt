@@ -61,6 +61,19 @@ if(PE_BITMAP_LOADER AND (BUILD_SHARED_LIBS OR BUILD_STATIC_LIBS))
   endif()
 endif(PE_BITMAP_LOADER AND (BUILD_SHARED_LIBS OR BUILD_STATIC_LIBS))
 
+option(PE_RESOURCE_TYPES "If the pe_resource_types program should be build as well" OFF)
+if(PE_RESOURCE_TYPES AND (BUILD_SHARED_LIBS OR BUILD_STATIC_LIBS))
+  add_executable(pe_resource_types pe_resource_types/main.c)
+  target_include_directories(pe_resource_types PRIVATE
+    include/
+  )
+  if(BUILD_STATIC_LIBS)
+    target_link_libraries(pe_resource_types pe_resource_loader_static)
+  elseif(BUILD_SHARED_LIBS)
+    target_link_libraries(pe_resource_types pe_resource_loader_shared)
+  endif()
+endif(PE_RESOURCE_TYPES AND (BUILD_SHARED_LIBS OR BUILD_STATIC_LIBS))
+
 include(GNUInstallDirs)
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/pe-resource-loader.pc.in"
   "${CMAKE_CURRENT_BINARY_DIR}/lib/pkgconfig/pe-resource-loader.pc" @ONLY)
@@ -85,4 +98,8 @@ if (NOT WIN32)
   if(PE_BITMAP_LOADER)
     install(TARGETS pe_bitmap_loader DESTINATION bin)
   endif(PE_BITMAP_LOADER)
+
+  if(PE_RESOURCE_TYPES)
+    install(TARGETS pe_resource_types DESTINATION bin)
+  endif(PE_RESOURCE_TYPES)
 endif(NOT WIN32)

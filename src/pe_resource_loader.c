@@ -201,6 +201,20 @@ void PeResourceLoader_Close(PeResourceLoader * loader) {
   loader = NULL;
 }
 
+PRL_ResourceDirectoryEntry * PeResourceLoader_GetDirectoryNamedEntries(PeResourceLoader * loader, uint32_t offset, uint16_t * entry_count) {
+  offset = loader->resource_offset + offset;
+
+  PRL_ResourceDirectoryTable resource_directory_table;
+  fseek(loader->fd, offset, SEEK_SET);
+  fread(&resource_directory_table, sizeof(PRL_ResourceDirectoryTable), 1, loader->fd);
+  *entry_count = resource_directory_table.number_of_name_entries;
+
+  PRL_ResourceDirectoryEntry * directory_entries = (PRL_ResourceDirectoryEntry *) calloc(resource_directory_table.number_of_name_entries, sizeof(PRL_ResourceDirectoryEntry));
+  fread(directory_entries, sizeof(PRL_ResourceDirectoryEntry), resource_directory_table.number_of_name_entries, loader->fd);
+  // for ()
+  return directory_entries;
+}
+
 PRL_ResourceDirectoryEntry * PeResourceLoader_GetDirectoryIdEntries(PeResourceLoader * loader, uint32_t offset, uint16_t * entry_count) {
   offset = loader->resource_offset + offset;
 
@@ -487,4 +501,52 @@ void * PeResourceLoader_GetResource(PeResourceLoader * loader, PRL_Type resource
   }
 
   return data;
+}
+
+uint32_t * PeResourceLoader_GetResourceTypes(PeResourceLoader *loader, uint16_t * resource_type_count) {
+  *resource_type_count = 0;
+  uint32_t * resource_types = NULL;
+  PRL_ResourceDirectoryEntry * entries = PeResourceLoader_GetDirectoryIdEntries(loader, 0, resource_type_count);
+  if (*resource_type_count > 0){
+    resource_types = (uint32_t *) calloc(*resource_type_count, sizeof(uint32_t));
+    for (uint16_t i = 0; i < *resource_type_count; i++) {
+      resource_types[i] = entries[i].name_offset_or_id;
+      if (resource_types[i] == 10) {
+        uint16_t resource_directory_count = 0;
+        printf("Getting ID entries:\n");
+        PRL_ResourceDirectoryEntry * resource_directories = PeResourceLoader_GetDirectoryNamedEntries(loader, entries[i].data_or_subdirectory_offset & 0x7FFFFFFF, &resource_directory_count);
+        for (uint16_t j = 0; j < resource_directory_count; j++) {
+          printf("%u\n", (resource_directories[j].name_offset_or_id & 0x7FFFFFFF) + loader->resource_offset);
+          fseek(loader->fd, (resource_directories[j].name_offset_or_id & 0x7FFFFFFF) + loader->resource_offset, SEEK_SET);
+          uint16_t length = 0;
+          fread(&length, sizeof(uint16_t), 1, loader->fd);
+          uint16_t var[length + 1];
+          var[length] = '\0';
+          fread(var, sizeof(uint16_t), length, loader->fd);
+          size_t new_size = (size_t) length;
+          char * new_string = (char *) PeResourceLoader_Utf16ToUtf8(var, &new_size);
+          printf("Name of size %u (%u): %s\n", length, new_size, new_string);
+
+          uint16_t lang_count = 0;
+          PRL_ResourceDirectoryEntry * new_directories = PeResourceLoader_GetDirectoryIdEntries(loader, resource_directories[j].data_or_subdirectory_offset & 0x7FFFFFFF, &lang_count);
+          printf("Found langs: %u (%u)\n", lang_count, new_directories[0].name_offset_or_id);
+          // Need to read a resource data entry
+          PE_ResourceDataEntry * data_entry = calloc(1, sizeof(PE_ResourceDataEntry));
+          fseek(loader->fd, loader->resource_offset + (new_directories[0].data_or_subdirectory_offset & 0x7FFFFFFF), SEEK_SET);
+          fread(data_entry, sizeof(PE_ResourceDataEntry), 1, loader->fd);
+          printf("Offset to data is %u and size is %u\n", data_entry->offset_to_data, data_entry->size);
+          
+          void * data = PeResourceLoader_GetDataEntryData(loader, data_entry);
+          FILE * new_file = fopen(new_string, "wb");
+          fwrite(data, 1, data_entry->size, new_file);
+          fclose(new_file);
+          free(data);
+          free(data_entry);
+        }
+      }
+    }
+    free(entries);
+  }
+  printf("\n");
+  return resource_types;
 }

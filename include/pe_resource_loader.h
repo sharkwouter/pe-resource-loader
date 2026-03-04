@@ -59,6 +59,7 @@ typedef enum {
   PRL_TYPE_ACCELERATOR=9,
   PRL_TYPE_RCDATA=10,
   PRL_TYPE_MESSAGETABLE=11,
+  PRL_TYPE_GROUPCURSOR=12,
   PRL_TYPE_GROUPICON=14,
   PRL_TYPE_VERSION=16,
   PRL_TYPE_DLGINCLUDE=17,
@@ -106,6 +107,12 @@ uint32_t * PeResourceLoader_GetResourceIds(PeResourceLoader *loader, PRL_Type re
  * @return The data contained in the resource as void pointer.
  */
 void * PeResourceLoader_GetResource(PeResourceLoader * loader, PRL_Type resource_type, uint32_t language_id, uint32_t resource_id, uint32_t * size);
+
+
+/**
+ * 
+ */
+uint32_t * PeResourceLoader_GetResourceTypes(PeResourceLoader * loader, uint16_t * resource_type_count);
 
 /**
  * @brief Language IDs found in PE files.
