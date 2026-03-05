@@ -73,7 +73,7 @@ int main(int argc, char ** argv) {
       }
       for (uint16_t bi = 0; bi < bitmap_name_count; bi++) {
         uint32_t file_size = 0;
-        void * data = PeResourceLoader_GetResource(loader, PRL_TYPE_BITMAP, languages[li], bitmap_names[bi].name_offset_or_id, &file_size);
+        void * data = PeResourceLoader_GetNamedResource(loader, PRL_TYPE_BITMAP, languages[li], &bitmap_names[bi], &file_size);
         if (file_size > 0) {
           char * file_name = calloc(bitmap_names[bi].name_length + 32 + 4, sizeof(char));
           snprintf(file_name, bitmap_names[bi].name_length + 32 + 4, "%s_%u.bmp", bitmap_names[bi].name, languages[li]);
