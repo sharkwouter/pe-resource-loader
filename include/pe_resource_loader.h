@@ -150,7 +150,11 @@ void * PeResourceLoader_GetResource(PeResourceLoader * loader, PRL_Type resource
 void * PeResourceLoader_GetNamedResource(PeResourceLoader * loader, PRL_Type resource_type, uint32_t language_id, PRL_ResourceName * resource_name, uint32_t * size);
 
 /**
- * 
+ * @brief Get a list of all resource types found in a PE file.
+ *
+ * @param loader PeResourceLoader struct pointer created by PeResourceLoader_Open.
+ * @param resource_type_count Will contain the amount of resource types in the returned array.
+ * @return An array of resource type IDs.
  */
 uint32_t * PeResourceLoader_GetResourceTypes(PeResourceLoader * loader, uint16_t * resource_type_count);
 
