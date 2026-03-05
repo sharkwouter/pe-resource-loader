@@ -453,7 +453,7 @@ void * PeResourceLoader_ProcessIconData(void * data, uint32_t * size) {
 }
 
 void * PeResourceLoader_ProcessBitmapData(void * data, uint32_t * size) {
-  uint8_t bmp_header[] = {0x42, 0x4d, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x36, 0x00, 0x00, 0x00};
+  uint8_t bmp_header[] = {0x42, 0x4d, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
   uint32_t return_size = sizeof(bmp_header) + *size;
 
   // Fix size in the header
@@ -461,6 +461,9 @@ void * PeResourceLoader_ProcessBitmapData(void * data, uint32_t * size) {
   bmp_header[3] = (return_size >> 8) & 0xFF;
   bmp_header[4] = (return_size >> 16) & 0xFF;
   bmp_header[5] = return_size >> 24;
+
+  // Set the offset of the pixel data
+  bmp_header[10] = sizeof(bmp_header) + ((uint32_t *) data)[0];
 
   void * return_data = calloc(1, return_size);
   memcpy(return_data, bmp_header, sizeof(bmp_header));
