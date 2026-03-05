@@ -453,6 +453,11 @@ void * PeResourceLoader_ProcessIconData(void * data, uint32_t * size) {
 }
 
 void * PeResourceLoader_ProcessBitmapData(void * data, uint32_t * size) {
+  if (((uint8_t *) data)[0] == 0x42 && ((uint8_t *) data)[0] == 0x4d) {
+    // The bmp header exists already
+    return data;
+  }
+
   uint8_t bmp_header[] = {0x42, 0x4d, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
   uint32_t return_size = sizeof(bmp_header) + *size;
 
@@ -463,7 +468,59 @@ void * PeResourceLoader_ProcessBitmapData(void * data, uint32_t * size) {
   bmp_header[5] = return_size >> 24;
 
   // Set the offset of the pixel data
-  uint32_t data_offset = sizeof(bmp_header) + ((uint32_t *) data)[0];
+  uint32_t header_size = ((uint32_t *) data)[0];
+  uint32_t data_offset = sizeof(bmp_header) + header_size;
+
+  // Get the pixel size from the header and adjust the data offset accordingly
+  if (header_size == 12) {
+    // This is an OS/2 header
+    uint16_t pixel_size = ((uint16_t *) data)[5];    
+    switch (pixel_size) {
+      case 1:
+        data_offset += 2 * 3;
+        break;
+      case 4:
+        data_offset += 16 * 3;
+        break;
+      case 8:
+        data_offset += 256 * 3;
+        break;
+      case 24:
+      default:
+        break;
+    }
+  } else if (header_size >= 40) {
+    uint16_t pixel_size = ((uint16_t *) data)[14];
+    uint32_t colors_in_palette = ((uint32_t *) data)[8];
+    if(colors_in_palette) {
+      data_offset += colors_in_palette * 4;
+    } else {
+      switch (pixel_size) {
+        case 1:
+          data_offset += 2 * 4;
+          break;
+        case 4:
+          data_offset += 16 * 4;
+          break;
+        case 8:
+          data_offset += 256 * 4;
+          break;
+        case 24:
+          break;
+        case 16:
+        case 32:
+          {
+            uint32_t compression_used = ((uint32_t *) data)[4];
+            if (compression_used == 3)
+              data_offset += 3 * 4;
+          }
+        default:
+          break;
+      }
+    }
+  }  
+
+  // Add offset to the header
   bmp_header[10] = data_offset & 0xFF;
   bmp_header[11] = (data_offset >> 8) & 0xFF;
   bmp_header[12] = (data_offset >> 16) & 0xFF;
