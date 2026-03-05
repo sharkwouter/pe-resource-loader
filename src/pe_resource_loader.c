@@ -463,7 +463,11 @@ void * PeResourceLoader_ProcessBitmapData(void * data, uint32_t * size) {
   bmp_header[5] = return_size >> 24;
 
   // Set the offset of the pixel data
-  bmp_header[10] = sizeof(bmp_header) + ((uint32_t *) data)[0];
+  uint32_t data_offset = sizeof(bmp_header) + ((uint32_t *) data)[0];
+  bmp_header[10] = data_offset & 0xFF;
+  bmp_header[11] = (data_offset >> 8) & 0xFF;
+  bmp_header[12] = (data_offset >> 16) & 0xFF;
+  bmp_header[13] = data_offset >> 24;
 
   void * return_data = calloc(1, return_size);
   memcpy(return_data, bmp_header, sizeof(bmp_header));
