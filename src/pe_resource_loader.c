@@ -547,33 +547,8 @@ void * PeResourceLoader_GetResource(PeResourceLoader * loader, PRL_Type resource
   return data;
 }
 
-void * PeResourceLoader_GetNamedResource(PeResourceLoader *loader, PRL_Type resource_type, uint32_t language_id, PRL_ResourceName *resource_name, uint32_t *size) {
-  if (size != NULL) {
-    *size = 0;
-  }
-
-  PE_ResourceDataEntry * data_entry = PeResourceLoader_GetDataEntry(loader, language_id, resource_name->name_offset_or_id, resource_type);
-  if (!data_entry) {
-    return NULL;
-  }
-
-  void * data = PeResourceLoader_GetDataEntryData(loader, data_entry);
-  if (!data) {
-    free(data_entry);
-    return NULL;
-  }
-
-  if (size != NULL) {
-    *size = data_entry->size;
-    free(data_entry);
-    data = PeResourceLoader_ProcessResourceData(resource_type, data, size, 0);
-  } else {
-    uint32_t temp_size = data_entry->size;
-    free(data_entry);
-    data = PeResourceLoader_ProcessResourceData(resource_type, data, &temp_size, 0);
-  }
-
-  return data;
+void * PeResourceLoader_GetNamedResource(PeResourceLoader *loader, PRL_Type resource_type, uint32_t language_id, PRL_ResourceName * resource_name, uint32_t *size) {
+  return PeResourceLoader_GetResource(loader, resource_type, language_id, resource_name->name_offset_or_id, size);
 }
 
 uint32_t *PeResourceLoader_GetResourceTypes(PeResourceLoader *loader, uint16_t *resource_type_count)

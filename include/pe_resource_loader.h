@@ -143,7 +143,7 @@ void * PeResourceLoader_GetResource(PeResourceLoader * loader, PRL_Type resource
  * @param loader PeResourceLoader struct pointer created by PeResourceLoader_Open.
  * @param resource_type The type of resource that is retrieved.
  * @param language_id The ID of the language the resource should be returned in.
- * @param resource_id The ID of the resource that should be returned.
+ * @param resource_name The PRL_ResourceName struct returned by PeResourceLoader_GetResourceNames.
  * @param size Will contain the size of the resource retrieved.
  * @return The data contained in the resource as void pointer.
  */
