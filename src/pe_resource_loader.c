@@ -437,7 +437,7 @@ void * PeResourceLoader_ProcessCursorData(void * data, uint32_t * size) {
   memcpy((uint8_t *) return_data + (sizeof(cursor_header) * sizeof(uint8_t)), (uint8_t *) data + 4, *size - 4);
   free(data);
 
-  *size = sizeof(cursor_header) * sizeof(uint8_t) + *size - 4;
+  *size = sizeof(cursor_header) + *size - 4;
   return return_data;
 }
 
@@ -448,18 +448,26 @@ void * PeResourceLoader_ProcessIconData(void * data, uint32_t * size) {
   memcpy((uint8_t *) return_data + (sizeof(icon_header) * sizeof(uint8_t)), data, *size);
   free(data);
 
-  *size = sizeof(icon_header) * sizeof(uint8_t) + *size;
+  *size = sizeof(icon_header) + *size;
   return return_data;
 }
 
 void * PeResourceLoader_ProcessBitmapData(void * data, uint32_t * size) {
-  uint8_t bmp_header[] = {0x42, 0x4d, 0x38, 0xf9, 0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x36, 0x00, 0x00, 0x00};
-  void * return_data = calloc(sizeof(bmp_header) + *size, sizeof(uint8_t));
-  memcpy(return_data, bmp_header, sizeof(bmp_header) * sizeof(uint8_t));
-  memcpy((uint8_t *) return_data + (sizeof(bmp_header) * sizeof(uint8_t)), data, *size);
+  uint8_t bmp_header[] = {0x42, 0x4d, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x36, 0x00, 0x00, 0x00};
+  uint32_t return_size = sizeof(bmp_header) + *size;
+
+  // Fix size in the header
+  bmp_header[2] = return_size & 0xFF;
+  bmp_header[3] = (return_size >> 8) & 0xFF;
+  bmp_header[4] = (return_size >> 16) & 0xFF;
+  bmp_header[5] = return_size >> 24;
+
+  void * return_data = calloc(1, return_size);
+  memcpy(return_data, bmp_header, sizeof(bmp_header));
+  memcpy((uint8_t *) return_data + (sizeof(bmp_header)), data, *size);
   free(data);
 
-  *size = sizeof(bmp_header) * sizeof(uint8_t) + *size;
+  *size = return_size;
   return return_data;
 }
 
