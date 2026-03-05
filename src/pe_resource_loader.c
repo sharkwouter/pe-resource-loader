@@ -211,7 +211,6 @@ PRL_ResourceDirectoryEntry * PeResourceLoader_GetDirectoryNamedEntries(PeResourc
 
   PRL_ResourceDirectoryEntry * directory_entries = (PRL_ResourceDirectoryEntry *) calloc(resource_directory_table.number_of_name_entries, sizeof(PRL_ResourceDirectoryEntry));
   fread(directory_entries, sizeof(PRL_ResourceDirectoryEntry), resource_directory_table.number_of_name_entries, loader->fd);
-  // for ()
   return directory_entries;
 }
 
@@ -227,6 +226,18 @@ PRL_ResourceDirectoryEntry * PeResourceLoader_GetDirectoryIdEntries(PeResourceLo
   fseek(loader->fd, sizeof(PRL_ResourceDirectoryEntry) * resource_directory_table.number_of_name_entries, SEEK_CUR);
   PRL_ResourceDirectoryEntry * directory_entries = (PRL_ResourceDirectoryEntry *) calloc(resource_directory_table.number_of_id_entries, sizeof(PRL_ResourceDirectoryEntry));
   fread(directory_entries, sizeof(PRL_ResourceDirectoryEntry), resource_directory_table.number_of_id_entries, loader->fd);
+  return directory_entries;
+}
+
+PRL_ResourceDirectoryEntry * PeResourceLoader_GetDirectoryEntries(PeResourceLoader * loader, uint32_t offset, uint16_t * entry_count) {
+  offset = loader->resource_offset + offset;
+
+  PRL_ResourceDirectoryTable resource_directory_table;
+  fseek(loader->fd, offset, SEEK_SET);
+  fread(&resource_directory_table, sizeof(PRL_ResourceDirectoryTable), 1, loader->fd);
+  *entry_count = resource_directory_table.number_of_id_entries;
+  PRL_ResourceDirectoryEntry * directory_entries = (PRL_ResourceDirectoryEntry *) calloc(resource_directory_table.number_of_id_entries + resource_directory_table.number_of_name_entries, sizeof(PRL_ResourceDirectoryEntry));
+  fread(directory_entries, sizeof(PRL_ResourceDirectoryEntry), resource_directory_table.number_of_id_entries + resource_directory_table.number_of_name_entries, loader->fd);
   return directory_entries;
 }
 
@@ -342,7 +353,7 @@ uint32_t * PeResourceLoader_GetLanguageIds(PeResourceLoader * loader, uint16_t *
   PRL_ResourceDirectoryEntry * resource_tables = PeResourceLoader_GetDirectoryIdEntries(loader, 0, &resource_table_count);
   for (uint16_t resource_table_index = 0; resource_table_index < resource_table_count; resource_table_index++) {
     uint16_t resource_directory_count = 0;
-    PRL_ResourceDirectoryEntry * resource_directories = PeResourceLoader_GetDirectoryIdEntries(loader, resource_tables[resource_table_index].data_or_subdirectory_offset & 0x7FFFFFFF, &resource_directory_count);
+    PRL_ResourceDirectoryEntry * resource_directories = PeResourceLoader_GetDirectoryEntries(loader, resource_tables[resource_table_index].data_or_subdirectory_offset & 0x7FFFFFFF, &resource_directory_count);
     for (uint16_t resource_directory_index = 0; resource_directory_index < resource_directory_count; resource_directory_index++) {
       uint16_t language_directory_count = 0;
       PRL_ResourceDirectoryEntry * language_directories = PeResourceLoader_GetDirectoryIdEntries(loader, resource_directories[resource_directory_index].data_or_subdirectory_offset  & 0x7FFFFFFF, &language_directory_count);
