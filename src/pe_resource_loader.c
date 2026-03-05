@@ -514,6 +514,7 @@ void * PeResourceLoader_ProcessBitmapData(void * data, uint32_t * size) {
             if (compression_used == 3)
               data_offset += 3 * 4;
           }
+          break;
         default:
           break;
       }
