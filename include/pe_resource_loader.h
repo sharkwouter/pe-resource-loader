@@ -21,6 +21,21 @@ typedef struct {
 } PeResourceLoader;
 
 /**
+ * @brief Struct with the name and internal offset of a named resource.
+ *
+ * This struct should only be used to list names of resources and to pass along to other functions of pe-resource-loader.
+ *
+ * @param name_length The length of the name string.
+ * @param name The name of the name resource as string.
+ *
+ */
+typedef struct {
+  uint16_t name_length;
+  char *  name;
+  uint32_t  name_offset_or_id;
+} PRL_ResourceName;
+
+/**
  * @brief Open a PE file for retrieving resources.
  *
  * When using pe-resource-loader this function should be used first.
@@ -59,6 +74,7 @@ typedef enum {
   PRL_TYPE_ACCELERATOR=9,
   PRL_TYPE_RCDATA=10,
   PRL_TYPE_MESSAGETABLE=11,
+  PRL_TYPE_GROUPCURSOR=12,
   PRL_TYPE_GROUPICON=14,
   PRL_TYPE_VERSION=16,
   PRL_TYPE_DLGINCLUDE=17,
@@ -89,7 +105,17 @@ uint32_t * PeResourceLoader_GetLanguageIds(PeResourceLoader * loader, uint16_t *
  * @param count Will contain the size of returned array not NULL.
  * @return An array of resource IDs.
  */
-uint32_t * PeResourceLoader_GetResourceIds(PeResourceLoader *loader, PRL_Type resource_type, uint32_t * count);
+uint32_t * PeResourceLoader_GetResourceIds(PeResourceLoader *loader, PRL_Type resource_type, uint16_t * count);
+
+/**
+ * @brief Get a struct all resource IDs in the PE file.
+ *
+ * @param loader PeResourceLoader struct pointer created by PeResourceLoader_Open.
+ * @param resource_type The type of resource of which IDs should be returned.
+ * @param count Will contain the size of returned array not NULL.
+ * @return An array of PRL_ResourceName structs, containing the length of the name, the name and the name offset that can also be used as an id in some cases.
+ */
+PRL_ResourceName * PeResourceLoader_GetResourceNames(PeResourceLoader *loader, PRL_Type resource_type, uint16_t * count);
 
 /**
  * @brief Retrieve a resource from a PE file.
@@ -106,6 +132,31 @@ uint32_t * PeResourceLoader_GetResourceIds(PeResourceLoader *loader, PRL_Type re
  * @return The data contained in the resource as void pointer.
  */
 void * PeResourceLoader_GetResource(PeResourceLoader * loader, PRL_Type resource_type, uint32_t language_id, uint32_t resource_id, uint32_t * size);
+
+/**
+ * @brief Retrieve a resource with a name instead of an id from a PE file.
+ *
+ * Headers will automatically be added to bitmaps, icons and cursors, making it possible to write them to disk as is.
+ * Strings will be automatically converted to UTF-8.
+ * Other types of resources will be returned as is.
+ *
+ * @param loader PeResourceLoader struct pointer created by PeResourceLoader_Open.
+ * @param resource_type The type of resource that is retrieved.
+ * @param language_id The ID of the language the resource should be returned in.
+ * @param resource_name The PRL_ResourceName struct returned by PeResourceLoader_GetResourceNames.
+ * @param size Will contain the size of the resource retrieved.
+ * @return The data contained in the resource as void pointer.
+ */
+void * PeResourceLoader_GetNamedResource(PeResourceLoader * loader, PRL_Type resource_type, uint32_t language_id, PRL_ResourceName * resource_name, uint32_t * size);
+
+/**
+ * @brief Get a list of all resource types found in a PE file.
+ *
+ * @param loader PeResourceLoader struct pointer created by PeResourceLoader_Open.
+ * @param resource_type_count Will contain the amount of resource types in the returned array.
+ * @return An array of resource type IDs.
+ */
+uint32_t * PeResourceLoader_GetResourceTypes(PeResourceLoader * loader, uint16_t * resource_type_count);
 
 /**
  * @brief Language IDs found in PE files.

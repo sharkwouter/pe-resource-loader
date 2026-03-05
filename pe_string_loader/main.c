@@ -19,7 +19,7 @@ int main(int argc, char ** argv) {
       continue;
     }
 
-    uint32_t string_count = 0;
+    uint16_t string_count = 0;
     uint32_t * string_ids = PeResourceLoader_GetResourceIds(loader, PRL_TYPE_STRING, &string_count);
     if (string_count == 0) {
       printf("No strings found in file %s\n", argv[i]);
