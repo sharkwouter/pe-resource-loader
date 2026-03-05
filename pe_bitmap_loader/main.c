@@ -44,6 +44,9 @@ int main(int argc, char ** argv) {
       if (bitmap_ids) {
         free(bitmap_ids);
       }
+      if (bitmap_names) {
+        free(bitmap_names);
+      }
       if (languages) {
         free(languages);
       }
@@ -54,40 +57,35 @@ int main(int argc, char ** argv) {
     for (uint16_t li = 0; li < language_count; li++) {
       printf("Language with id %u:\n", languages[li]);
       for (uint16_t bi = 0; bi < bitmap_count; bi++) {
-        printf("Found bitmap with id %u\n", bitmap_ids[bi]);
         uint32_t file_size = 0;
         void * data = PeResourceLoader_GetResource(loader, PRL_TYPE_BITMAP, languages[li], bitmap_ids[bi], &file_size);
-        printf("File size is %u\n", file_size);
         if (file_size > 0) {
-          char * file_name = calloc(34, sizeof(char));
-          snprintf(file_name, 34, "%u_%u.bmp", bitmap_ids[bi], languages[li]);
-          printf("Using file name %s\n", file_name);
+          char * file_name = calloc(32 + 32 + 5, sizeof(char));
+          snprintf(file_name, 32 + 32 + 5, "%u_%u.bmp", bitmap_ids[bi], languages[li]);
+          printf("Exporting file %s\n", file_name);
           FILE * file = fopen(file_name, "wb");
           free(file_name);
           fwrite(data, 1, file_size, file);
           fclose(file);
         }
-        if (data)
+        if (data != NULL)
           free(data);
       }
       for (uint16_t bi = 0; bi < bitmap_name_count; bi++) {
-        printf("Found bitmap with name %s\n", bitmap_names[bi].name);
         uint32_t file_size = 0;
         void * data = PeResourceLoader_GetResource(loader, PRL_TYPE_BITMAP, languages[li], bitmap_names[bi].offset, &file_size);
-        printf("File size is %u\n", file_size);
         if (file_size > 0) {
           char * file_name = calloc(bitmap_names[bi].name_length + 32 + 4, sizeof(char));
           snprintf(file_name, bitmap_names[bi].name_length + 32 + 4, "%s_%u.bmp", bitmap_names[bi].name, languages[li]);
-          printf("Using file name %s\n", file_name);
+          printf("Exporting file %s\n", file_name);
           FILE * file = fopen(file_name, "wb");
           free(file_name);
           fwrite(data, 1, file_size, file);
           fclose(file);
         }
-        if (data)
+        if (data != NULL)
           free(data);
       }
-      printf("\n");
     }
     free(languages);
     free(bitmap_ids);
