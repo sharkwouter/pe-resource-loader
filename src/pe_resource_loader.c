@@ -474,7 +474,7 @@ void * PeResourceLoader_ProcessBitmapData(void * data, uint32_t * size) {
   // Get the pixel size from the header and adjust the data offset accordingly
   if (header_size == 12) {
     // This is an OS/2 header
-    uint16_t pixel_size = ((uint16_t *) data)[5];    
+    uint16_t pixel_size = ((uint16_t *) data)[5];
     switch (pixel_size) {
       case 1:
         data_offset += 2 * 3;
@@ -491,7 +491,7 @@ void * PeResourceLoader_ProcessBitmapData(void * data, uint32_t * size) {
         break;
     }
   } else if (header_size >= 40) {
-    uint16_t pixel_size = ((uint16_t *) data)[14];
+    uint16_t pixel_size = ((uint16_t *) data)[7];
     uint32_t colors_in_palette = ((uint32_t *) data)[8];
     if(colors_in_palette) {
       data_offset += colors_in_palette * 4;
