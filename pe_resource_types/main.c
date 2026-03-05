@@ -32,7 +32,12 @@ int main(int argc, char ** argv) {
     }
 
     for (uint16_t i = 0; i < resource_type_count; i++) {
-      printf("%u\n", resource_type_ids[i]);
+      printf("Resource type %u:\n", resource_type_ids[i]);
+      uint16_t resource_count = 0;
+      PRL_ResourceName * resource_names = PeResourceLoader_GetResourceNames(loader, (PRL_Type) resource_type_ids[i], &resource_count);
+      for (uint16_t j = 0; j < resource_count; j++) {
+        printf("%s\n", resource_names[j].name);
+      }
     }
   
     free(resource_type_ids);
