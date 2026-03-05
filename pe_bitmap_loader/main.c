@@ -3,9 +3,6 @@
 
 #include <pe_resource_loader.h>
 
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
-
 int main(int argc, char ** argv) {
   if (argc < 2) {
     printf("No file was defined\n");
@@ -24,11 +21,16 @@ int main(int argc, char ** argv) {
 
     uint32_t bitmap_count = 0;
     uint32_t * bitmap_ids = PeResourceLoader_GetResourceIds(loader, PRL_TYPE_BITMAP, &bitmap_count);
-    if (bitmap_count == 0) {
+    uint16_t bitmap_name_count = 0;
+    PRL_ResourceName * bitmap_names = PeResourceLoader_GetResourceNames(loader, PRL_TYPE_BITMAP, &bitmap_name_count);
+    if (bitmap_count == 0 && bitmap_name_count == 0) {
       printf("No bitmaps found in file %s\n", argv[i]);
       PeResourceLoader_Close(loader);
       if (bitmap_ids) {
         free(bitmap_ids);
+      }
+      if (bitmap_names) {
+        free(bitmap_names);
       }
       return_value = 3;
       continue;
@@ -53,21 +55,43 @@ int main(int argc, char ** argv) {
       printf("Language with id %u:\n", languages[li]);
       for (uint16_t bi = 0; bi < bitmap_count; bi++) {
         printf("Found bitmap with id %u\n", bitmap_ids[bi]);
-        char * file_name = calloc(34, sizeof(char));
-        snprintf(file_name, 34, "%i_%u_%u.bmp", i, languages[li], bitmap_ids[bi]);
-        FILE * file = fopen(file_name, "wb");
-        free(file_name);
         uint32_t file_size = 0;
         void * data = PeResourceLoader_GetResource(loader, PRL_TYPE_BITMAP, languages[li], bitmap_ids[bi], &file_size);
         printf("File size is %u\n", file_size);
-        fwrite(data, 1, file_size, file);
-        fclose(file);
-        free(data);
+        if (file_size > 0) {
+          char * file_name = calloc(34, sizeof(char));
+          snprintf(file_name, 34, "%u_%u.bmp", bitmap_ids[bi], languages[li]);
+          printf("Using file name %s\n", file_name);
+          FILE * file = fopen(file_name, "wb");
+          free(file_name);
+          fwrite(data, 1, file_size, file);
+          fclose(file);
+        }
+        if (data)
+          free(data);
+      }
+      for (uint16_t bi = 0; bi < bitmap_name_count; bi++) {
+        printf("Found bitmap with name %s\n", bitmap_names[bi].name);
+        uint32_t file_size = 0;
+        void * data = PeResourceLoader_GetResource(loader, PRL_TYPE_BITMAP, languages[li], bitmap_names[bi].offset, &file_size);
+        printf("File size is %u\n", file_size);
+        if (file_size > 0) {
+          char * file_name = calloc(bitmap_names[bi].name_length + 32 + 4, sizeof(char));
+          snprintf(file_name, bitmap_names[bi].name_length + 32 + 4, "%s_%u.bmp", bitmap_names[bi].name, languages[li]);
+          printf("Using file name %s\n", file_name);
+          FILE * file = fopen(file_name, "wb");
+          free(file_name);
+          fwrite(data, 1, file_size, file);
+          fclose(file);
+        }
+        if (data)
+          free(data);
       }
       printf("\n");
     }
     free(languages);
     free(bitmap_ids);
+    free(bitmap_names);
 
     PeResourceLoader_Close(loader);
   }

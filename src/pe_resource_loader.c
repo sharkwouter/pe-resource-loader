@@ -415,7 +415,7 @@ PRL_ResourceName * PeResourceLoader_GetResourceNames(PeResourceLoader *loader, P
   }
   PRL_ResourceName * resource_names = (PRL_ResourceName *) calloc(*count, sizeof(PRL_ResourceName));
   for (uint16_t i = 0; i < *count; i++) {
-    resource_names[i].offset = resource_entries[i].data_or_subdirectory_offset & 0x7FFFFFFF;
+    resource_names[i].offset = resource_entries[i].name_offset_or_id;
     fseek(loader->fd, (resource_entries[i].name_offset_or_id & 0x7FFFFFFF) + loader->resource_offset, SEEK_SET);
     fread(&resource_names[i].name_length, sizeof(uint16_t), 1, loader->fd);
     uint16_t utf16_string[resource_names[i].name_length];
@@ -543,7 +543,37 @@ void * PeResourceLoader_GetResource(PeResourceLoader * loader, PRL_Type resource
   return data;
 }
 
-uint32_t * PeResourceLoader_GetResourceTypes(PeResourceLoader *loader, uint16_t * resource_type_count) {
+void * PeResourceLoader_GetNamedResource(PeResourceLoader *loader, PRL_Type resource_type, uint32_t language_id, PRL_ResourceName *resource_name, uint32_t *size) {
+  if (size != NULL) {
+    *size = 0;
+  }
+
+  PE_ResourceDataEntry * data_entry = PeResourceLoader_GetDataEntry(loader, language_id, resource_name->offset, resource_type);
+  if (!data_entry) {
+    return NULL;
+  }
+
+  void * data = PeResourceLoader_GetDataEntryData(loader, data_entry);
+  if (!data) {
+    free(data_entry);
+    return NULL;
+  }
+
+  if (size != NULL) {
+    *size = data_entry->size;
+    free(data_entry);
+    data = PeResourceLoader_ProcessResourceData(resource_type, data, size, 0);
+  } else {
+    uint32_t temp_size = data_entry->size;
+    free(data_entry);
+    data = PeResourceLoader_ProcessResourceData(resource_type, data, &temp_size, 0);
+  }
+
+  return data;
+}
+
+uint32_t *PeResourceLoader_GetResourceTypes(PeResourceLoader *loader, uint16_t *resource_type_count)
+{
   *resource_type_count = 0;
   uint32_t * resource_types = NULL;
   PRL_ResourceDirectoryEntry * entries = PeResourceLoader_GetDirectoryIdEntries(loader, 0, resource_type_count);

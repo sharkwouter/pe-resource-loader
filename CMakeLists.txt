@@ -50,7 +50,7 @@ endif(PE_STRING_LOADER AND (BUILD_SHARED_LIBS OR BUILD_STATIC_LIBS))
 
 option(PE_BITMAP_LOADER "If the pe_bitmap_loader program should be build as well" ON)
 if(PE_BITMAP_LOADER AND (BUILD_SHARED_LIBS OR BUILD_STATIC_LIBS))
-  add_executable(pe_bitmap_loader pe_bitmap_loader/main.c pe_bitmap_loader/stb_image_write.h)
+  add_executable(pe_bitmap_loader pe_bitmap_loader/main.c)
   target_include_directories(pe_bitmap_loader PRIVATE
     include/
   )

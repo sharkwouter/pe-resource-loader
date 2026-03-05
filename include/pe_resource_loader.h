@@ -147,7 +147,7 @@ void * PeResourceLoader_GetResource(PeResourceLoader * loader, PRL_Type resource
  * @param size Will contain the size of the resource retrieved.
  * @return The data contained in the resource as void pointer.
  */
-void * PeResourceLoader_GetNamedResource(PeResourceLoader * loader, PRL_Type resource_type, uint32_t language_id, uint32_t resource_id, uint32_t * size);
+void * PeResourceLoader_GetNamedResource(PeResourceLoader * loader, PRL_Type resource_type, uint32_t language_id, PRL_ResourceName * resource_name, uint32_t * size);
 
 /**
  * 
