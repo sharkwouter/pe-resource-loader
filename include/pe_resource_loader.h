@@ -32,7 +32,7 @@ typedef struct {
 typedef struct {
   uint16_t name_length;
   char *  name;
-  uint32_t  offset;
+  uint32_t  name_offset_or_id;
 } PRL_ResourceName;
 
 /**
@@ -113,7 +113,7 @@ uint32_t * PeResourceLoader_GetResourceIds(PeResourceLoader *loader, PRL_Type re
  * @param loader PeResourceLoader struct pointer created by PeResourceLoader_Open.
  * @param resource_type The type of resource of which IDs should be returned.
  * @param count Will contain the size of returned array not NULL.
- * @return An array of PRL_ResourceName structs, containing the length of the name, the name and the offset in the file (for internal use).
+ * @return An array of PRL_ResourceName structs, containing the length of the name, the name and the name offset that can also be used as an id in some cases.
  */
 PRL_ResourceName * PeResourceLoader_GetResourceNames(PeResourceLoader *loader, PRL_Type resource_type, uint16_t * count);
 

@@ -419,7 +419,7 @@ PRL_ResourceName * PeResourceLoader_GetResourceNames(PeResourceLoader *loader, P
   }
   PRL_ResourceName * resource_names = (PRL_ResourceName *) calloc(*count, sizeof(PRL_ResourceName));
   for (uint16_t i = 0; i < *count; i++) {
-    resource_names[i].offset = resource_entries[i].name_offset_or_id;
+    resource_names[i].name_offset_or_id = resource_entries[i].name_offset_or_id;
     fseek(loader->fd, (resource_entries[i].name_offset_or_id & 0x7FFFFFFF) + loader->resource_offset, SEEK_SET);
     fread(&resource_names[i].name_length, sizeof(uint16_t), 1, loader->fd);
     uint16_t utf16_string[resource_names[i].name_length];
@@ -552,7 +552,7 @@ void * PeResourceLoader_GetNamedResource(PeResourceLoader *loader, PRL_Type reso
     *size = 0;
   }
 
-  PE_ResourceDataEntry * data_entry = PeResourceLoader_GetDataEntry(loader, language_id, resource_name->offset, resource_type);
+  PE_ResourceDataEntry * data_entry = PeResourceLoader_GetDataEntry(loader, language_id, resource_name->name_offset_or_id, resource_type);
   if (!data_entry) {
     return NULL;
   }
