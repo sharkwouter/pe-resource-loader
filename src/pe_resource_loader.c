@@ -486,6 +486,7 @@ void * PeResourceLoader_ProcessBitmapData(void * data, uint32_t * size) {
         data_offset += 256 * 3;
         break;
       case 24:
+        break;
       default:
         break;
     }
