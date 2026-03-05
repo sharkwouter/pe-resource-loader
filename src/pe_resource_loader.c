@@ -380,8 +380,8 @@ uint32_t * PeResourceLoader_GetLanguageIds(PeResourceLoader * loader, uint16_t *
   return languages;
 }
 
-uint32_t * PeResourceLoader_GetResourceIds(PeResourceLoader * loader, PRL_Type resource_type, uint32_t * count) {
-  PRL_ResourceDirectoryEntry * directories = PeResourceLoader_GetDirectories(loader, (uint16_t *) count, resource_type);
+uint32_t * PeResourceLoader_GetResourceIds(PeResourceLoader * loader, PRL_Type resource_type, uint16_t * count) {
+  PRL_ResourceDirectoryEntry * directories = PeResourceLoader_GetDirectories(loader, count, resource_type);
   if (resource_type == PRL_TYPE_STRING) {
     *count = *count * 16;
   }

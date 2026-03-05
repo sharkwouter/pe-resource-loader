@@ -105,7 +105,7 @@ uint32_t * PeResourceLoader_GetLanguageIds(PeResourceLoader * loader, uint16_t *
  * @param count Will contain the size of returned array not NULL.
  * @return An array of resource IDs.
  */
-uint32_t * PeResourceLoader_GetResourceIds(PeResourceLoader *loader, PRL_Type resource_type, uint32_t * count);
+uint32_t * PeResourceLoader_GetResourceIds(PeResourceLoader *loader, PRL_Type resource_type, uint16_t * count);
 
 /**
  * @brief Get a struct all resource IDs in the PE file.

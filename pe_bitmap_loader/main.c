@@ -19,7 +19,7 @@ int main(int argc, char ** argv) {
       continue;
     }
 
-    uint32_t bitmap_count = 0;
+    uint16_t bitmap_count = 0;
     uint32_t * bitmap_ids = PeResourceLoader_GetResourceIds(loader, PRL_TYPE_BITMAP, &bitmap_count);
     uint16_t bitmap_name_count = 0;
     PRL_ResourceName * bitmap_names = PeResourceLoader_GetResourceNames(loader, PRL_TYPE_BITMAP, &bitmap_name_count);
