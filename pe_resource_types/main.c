@@ -31,11 +31,9 @@ int main(int argc, char ** argv) {
       continue;
     }
 
-    printf("Found resource types:\n");
     for (uint16_t i = 0; i < resource_type_count; i++) {
       printf("%u\n", resource_type_ids[i]);
     }
-  
     free(resource_type_ids);
 
     PeResourceLoader_Close(loader);
