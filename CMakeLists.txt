@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 
 project(pe_resource_loader VERSION 1.0.0)
+include(CTest)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -pedantic")
 set(CMAKE_CXX_FLAGS_DEBUG "-DDEBUG=1")
@@ -73,6 +74,17 @@ if(PE_RESOURCE_TYPES AND (BUILD_SHARED_LIBS OR BUILD_STATIC_LIBS))
     target_link_libraries(pe_resource_types pe_resource_loader_shared)
   endif()
 endif(PE_RESOURCE_TYPES AND (BUILD_SHARED_LIBS OR BUILD_STATIC_LIBS))
+
+if(BUILD_TESTING)
+  add_executable(pe_resource_loader_hardening_test tests/hardening_test.c)
+  target_include_directories(pe_resource_loader_hardening_test PRIVATE include/)
+  if(BUILD_STATIC_LIBS)
+    target_link_libraries(pe_resource_loader_hardening_test pe_resource_loader_static)
+  elseif(BUILD_SHARED_LIBS)
+    target_link_libraries(pe_resource_loader_hardening_test pe_resource_loader_shared)
+  endif()
+  add_test(NAME pe_resource_loader_hardening_test COMMAND pe_resource_loader_hardening_test)
+endif()
 
 include(GNUInstallDirs)
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/pe-resource-loader.pc.in"
