@@ -871,7 +871,8 @@ PRL_ResourceName * PeResourceLoader_GetResourceNames(PeResourceLoader *loader, P
       goto error_cleanup;
     }
 
-    uint16_t * utf16_string = (uint16_t *) calloc(resource_names[i].name_length > 0 ? resource_names[i].name_length : 1, sizeof(uint16_t));
+    size_t alloc_length = resource_names[i].name_length > 0 ? resource_names[i].name_length : 1;
+    uint16_t * utf16_string = (uint16_t *) calloc(alloc_length, sizeof(uint16_t));
     if (!utf16_string) {
       goto error_cleanup;
     }

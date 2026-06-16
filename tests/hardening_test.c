@@ -9,13 +9,13 @@
 void * PeResourceLoader_ProcessBitmapData(void * data, uint32_t * size);
 
 static int write_file(const char * path, const uint8_t * data, size_t size) {
-  FILE * fd = fopen(path, "wb");
-  if (!fd) {
+  FILE * file = fopen(path, "wb");
+  if (!file) {
     return 0;
   }
 
-  int ok = fwrite(data, 1, size, fd) == size;
-  fclose(fd);
+  int ok = fwrite(data, 1, size, file) == size;
+  fclose(file);
   return ok;
 }
 
