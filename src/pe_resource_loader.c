@@ -387,13 +387,14 @@ uint32_t * PeResourceLoader_GetResourceIds(PeResourceLoader * loader, PRL_Type r
   }
   uint32_t * resource_ids = (uint32_t *) calloc(*count, sizeof(uint32_t));
   for(uint16_t i = 0; i < *count; i++) {
-    // Skip named entries
-    if (directories[i].name_offset_or_id & 0x80000000)
-      continue;
     if (resource_type == PRL_TYPE_STRING) {
-      resource_ids[i] = (directories[i / 16].name_offset_or_id - 1) * 16 + (i % 16);
+      // Skip named entries
+      if (~directories[i / 16].name_offset_or_id & 0x80000000)
+        resource_ids[i] = (directories[i / 16].name_offset_or_id - 1) * 16 + (i % 16);
     } else {
-      resource_ids[i] = directories[i].name_offset_or_id;
+      // Skip named entries
+      if (~directories[i].name_offset_or_id & 0x80000000)
+        resource_ids[i] = directories[i].name_offset_or_id;
     }
   }
   free(directories);
